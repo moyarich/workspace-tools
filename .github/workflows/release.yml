@@ -47,6 +47,20 @@ on:
 permissions: {}
 
 jobs:
+  validate-release-ref:
+    name: Validate release branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main for a real release
+        env:
+          DRY_RUN: ${{ inputs.dry-run }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          if [[ "$DRY_RUN" == "false" && "$TARGET_BRANCH" != "main" ]]; then
+            echo "::error::Real releases must run from main."
+            exit 1
+          fi
+
   dispatch-input-summary:
     name: "job: Workflow parameters"
     permissions:
@@ -57,7 +71,7 @@ jobs:
       heading: "release · Dispatch parameters"
 
   release:
-    needs: dispatch-input-summary
+    needs: [validate-release-ref, dispatch-input-summary]
     permissions:
       contents: write
       packages: read

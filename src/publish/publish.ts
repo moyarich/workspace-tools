@@ -22,7 +22,7 @@ import {
   type WorkspacePackage,
 } from "../workspace/workspace.ts";
 
-type Registry = "github" | "npm";
+type Registry = "github" | "npm" | "custom";
 type RegistrySelection = Registry | "all" | "both";
 type PackageAccess = "public" | "restricted";
 interface RegistryConfig {
@@ -32,6 +32,7 @@ interface RegistryConfig {
 }
 export interface PublishOptions {
   registry?: RegistrySelection;
+  registryUrl?: string;
   tag?: string;
   access?: PackageAccess;
   dryRun?: boolean;
@@ -74,11 +75,11 @@ import {
 } from "../dependency-check/dependency-check.ts";
 
 /**
- * @typedef {"github" | "npm"} Registry
+ * @typedef {"github" | "npm" | "custom"} Registry
  */
 
 /**
- * @typedef {"github" | "npm" | "all" | "both"} RegistrySelection
+ * @typedef {"github" | "npm" | "custom" | "all" | "both"} RegistrySelection
  */
 
 /**
@@ -95,6 +96,7 @@ import {
 /**
  * @typedef {object} PublishOptions
  * @property {RegistrySelection} [registry]
+ * @property {string} [registryUrl]
  * @property {string} [tag]
  * @property {PackageAccess} [access]
  * @property {boolean} [dryRun]
@@ -130,8 +132,29 @@ function registryConfig(registry: Registry): RegistryConfig {
         token: process.env["_NPM_" + "TOKEN"],
       };
 
+    case "custom": {
+      const raw = process.env.CUSTOM_REGISTRY_URL;
+      if (!raw)
+        throw new Error("CUSTOM_REGISTRY_URL is required for custom registry.");
+      const url = new URL(raw);
+      if (
+        url.protocol !== "https:" ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash
+      )
+        throw new Error(
+          "Custom registry requires an HTTPS URL without credentials, query, or fragment.",
+        );
+      return {
+        url: url.toString(),
+        host: url.host + url.pathname.replace(/\/$/, ""),
+        token: process.env["_CUSTOM_REGISTRY_TOKEN"],
+      };
+    }
     default:
-      throw new Error("Registry must be github, npm, all, or both.");
+      throw new Error("Registry must be github, npm, custom, all, or both.");
   }
 }
 
@@ -761,7 +784,9 @@ function publishOne(
     throw new Error(
       registry === "github"
         ? "Set _GITHUB_TOKEN before publishing."
-        : "Set _NPM_TOKEN before staging a release.",
+        : registry === "custom"
+          ? "Set _CUSTOM_REGISTRY_TOKEN before publishing."
+          : "Set _NPM_TOKEN before staging a release.",
     );
   }
 
@@ -781,7 +806,7 @@ function publishOne(
   const env = registryNpmEnvironment(config, npmrc);
 
   try {
-    if (registry === "github") {
+    if (registry === "github" || registry === "custom") {
       execFileSync(
         "npm",
         registryPublishArgs(registry, artifact.path, tag, access),
@@ -835,6 +860,7 @@ function publishOne(
 export function publish({
   selector,
   registry = "npm",
+  registryUrl,
   tag,
   access = "public",
   dryRun = false,
@@ -847,6 +873,7 @@ export function publish({
 }: {
   selector?: string;
   registry?: RegistrySelection;
+  registryUrl?: string;
   tag?: string;
   access?: PackageAccess;
   dryRun?: boolean;
@@ -873,8 +900,15 @@ export function publish({
     throw new Error("Access must be public or restricted.");
   }
 
-  if (!["github", "npm", "all", "both"].includes(registry)) {
-    throw new Error("Registry must be github, npm, all, or both.");
+  if (!["github", "npm", "custom", "all", "both"].includes(registry)) {
+    throw new Error("Registry must be github, npm, custom, all, or both.");
+  }
+
+  if (registry === "custom") {
+    if (!registryUrl)
+      throw new Error("--registry-url is required for custom publishing.");
+    process.env.CUSTOM_REGISTRY_URL = registryUrl;
+    registryConfig("custom");
   }
 
   const root = repositoryRoot();
@@ -1214,6 +1248,7 @@ export function publishWorkspacePackage(
   const result = publish({
     selector: selectedPackage,
     registry: options.registry,
+    registryUrl: options.registryUrl,
     tag: options.tag,
     access: options.access,
     dryRun: options.dryRun,

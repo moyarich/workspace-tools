@@ -9,9 +9,10 @@ program
   .option("--package <selector>", "Package name or directory")
   .addOption(
     new Option("-r, --registry <registry>", "Registry")
-      .choices(["github", "npm", "all", "both"])
+      .choices(["github", "npm", "all", "both", "custom"])
       .default("npm"),
   )
+  .option("--registry-url <url>", "HTTPS URL for the custom registry")
   .option("-t, --tag <tag>", "npm distribution tag")
   .addOption(
     new Option("-a, --access <access>", "Package access")

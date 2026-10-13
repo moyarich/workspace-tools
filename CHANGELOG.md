@@ -6,6 +6,28 @@ Reusable GitHub workflows and standalone actions are released separately from `m
 
 ## Unreleased
 
+## [0.2.1]
+
+### Release version resolution
+
+- **Automatic package-scoped versions** — Use `workspace-release-identity resolve-versions --mode auto` to derive the next patch version from each package's latest stable Git tag. When no stable tag exists, use the configurable initial version (default `0.1.0`).
+- **Shared version modes** — Resolve `auto`, `bump`, `package-json`, and `exact` consistently for one or more selected workspaces, with JSON output for CI and reusable workflows.
+- **SemVer safeguards** — Validate current and resolved versions, detect invalid selections, and support stable and prerelease increments.
+
+### Publishing
+
+- **Custom HTTPS registries** — Publish to a custom registry with `workspace-publish --registry custom --registry-url <https-url>`, using `_CUSTOM_REGISTRY_TOKEN` for authenticated publication. Existing npm and GitHub Packages destinations remain available.
+
+### Documentation and playground
+
+- **Heading anchors** — Add predictable slug anchors to rendered playground documentation.
+- **MDX icons** — Support Lucide icons in playground MDX content.
+- **Outline navigation** — Correct selection of the last “On this page” heading when reaching the bottom of a document.
+
+### Maintenance
+
+- **CI safety** — Validate pull requests while guarding production workflows from unintended execution.
+
 ## [0.2.0]
 
 ### Breaking changes

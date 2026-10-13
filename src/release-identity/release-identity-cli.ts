@@ -5,7 +5,6 @@ import { verifyRestoreArtifactEquivalenceAny } from "../release-identity/restore
 import { resolveRestoreSource } from "../release-identity/restore-source.ts";
 import { packageInfo, repositoryRoot } from "../workspace/workspace.ts";
 
-
 const resolveVersionsMode = process.argv[2] === "resolve-versions";
 const restoreSourceMode = process.argv[2] === "restore-source";
 const restoreEquivalenceMode = process.argv[2] === "restore-equivalence";
@@ -18,10 +17,33 @@ program
 
 if (resolveVersionsMode) {
   program
-    .requiredOption("--packages-json <json>", "Selected publishable package records as JSON")
-    .addOption(new Option("--mode <mode>", "Version resolution mode").choices(["auto", "bump", "package-json", "exact"]).default("package-json"))
-    .addOption(new Option("--bump <kind>", "SemVer increment").choices(["major", "minor", "patch", "premajor", "preminor", "prepatch", "prerelease"]).default("patch"))
-    .option("--initial-version <version>", "Initial version for auto mode", "0.1.0")
+    .requiredOption(
+      "--packages-json <json>",
+      "Selected publishable package records as JSON",
+    )
+    .addOption(
+      new Option("--mode <mode>", "Version resolution mode")
+        .choices(["auto", "bump", "package-json", "exact"])
+        .default("package-json"),
+    )
+    .addOption(
+      new Option("--bump <kind>", "SemVer increment")
+        .choices([
+          "major",
+          "minor",
+          "patch",
+          "premajor",
+          "preminor",
+          "prepatch",
+          "prerelease",
+        ])
+        .default("patch"),
+    )
+    .option(
+      "--initial-version <version>",
+      "Initial version for auto mode",
+      "0.1.0",
+    )
     .option("--exact-version <version>", "Version used for exact mode", "")
     .action((options) => {
       const selected = JSON.parse(options.packagesJson);
@@ -33,7 +55,11 @@ if (resolveVersionsMode) {
       });
       process.stdout.write(JSON.stringify(resolved));
     });
-  await program.parseAsync([process.argv[0]!, process.argv[1]!, ...process.argv.slice(3)]);
+  await program.parseAsync([
+    process.argv[0]!,
+    process.argv[1]!,
+    ...process.argv.slice(3),
+  ]);
 } else if (restoreSourceMode) {
   program
     .requiredOption(

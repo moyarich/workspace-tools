@@ -9,7 +9,14 @@ export interface VersionedPackage {
 }
 export interface ReleaseVersionOptions {
   mode: "auto" | "bump" | "package-json" | "exact";
-  bump?: "major" | "minor" | "patch" | "premajor" | "preminor" | "prepatch" | "prerelease";
+  bump?:
+    | "major"
+    | "minor"
+    | "patch"
+    | "premajor"
+    | "preminor"
+    | "prepatch"
+    | "prerelease";
   initialVersion?: string;
   exactVersion?: string;
 }
@@ -23,15 +30,26 @@ export function resolveReleaseVersions<T extends VersionedPackage>(
   options: ReleaseVersionOptions,
   listTags: (prefix: string) => string[] = (prefix) =>
     execFileSync("git", ["tag", "--list", `${prefix}*`], { encoding: "utf8" })
-      .split("\n").map((tag) => tag.trim()).filter(Boolean),
+      .split("\n")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
 ): Array<T & { currentVersion: string; major: string }> {
-  if (!Array.isArray(packages) || !packages.length) throw new Error("No packages selected for release.");
-  const { mode, bump = "patch", initialVersion = "0.1.0", exactVersion = "" } = options;
-  if (!["auto", "bump", "package-json", "exact"].includes(mode)) throw new Error(`Invalid version mode: ${mode}`);
-  if (!semver.valid(initialVersion)) throw new Error(`Invalid initial version: ${initialVersion}`);
+  if (!Array.isArray(packages) || !packages.length)
+    throw new Error("No packages selected for release.");
+  const {
+    mode,
+    bump = "patch",
+    initialVersion = "0.1.0",
+    exactVersion = "",
+  } = options;
+  if (!["auto", "bump", "package-json", "exact"].includes(mode))
+    throw new Error(`Invalid version mode: ${mode}`);
+  if (!semver.valid(initialVersion))
+    throw new Error(`Invalid initial version: ${initialVersion}`);
   return packages.map((pkg) => {
     const current = pkg.version;
-    if (!semver.valid(current)) throw new Error(`Invalid current version for ${pkg.name}: ${current}`);
+    if (!semver.valid(current))
+      throw new Error(`Invalid current version for ${pkg.name}: ${current}`);
     let version = current;
     if (mode === "exact") version = exactVersion;
     if (mode === "bump") version = semver.inc(current, bump) ?? "";
@@ -43,9 +61,17 @@ export function resolveReleaseVersions<T extends VersionedPackage>(
         .filter((v) => semver.valid(v) && !semver.prerelease(v))
         .sort(semver.compare)
         .at(-1);
-      version = previous ? semver.inc(previous, "patch") ?? "" : initialVersion;
+      version = previous
+        ? (semver.inc(previous, "patch") ?? "")
+        : initialVersion;
     }
-    if (!semver.valid(version)) throw new Error(`Invalid resolved version for ${pkg.name}: ${version}`);
-    return { ...pkg, currentVersion: current, version, major: semver.major(version).toString() };
+    if (!semver.valid(version))
+      throw new Error(`Invalid resolved version for ${pkg.name}: ${version}`);
+    return {
+      ...pkg,
+      currentVersion: current,
+      version,
+      major: semver.major(version).toString(),
+    };
   });
 }

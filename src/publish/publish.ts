@@ -134,10 +134,19 @@ function registryConfig(registry: Registry): RegistryConfig {
 
     case "custom": {
       const raw = process.env.CUSTOM_REGISTRY_URL;
-      if (!raw) throw new Error("CUSTOM_REGISTRY_URL is required for custom registry.");
+      if (!raw)
+        throw new Error("CUSTOM_REGISTRY_URL is required for custom registry.");
       const url = new URL(raw);
-      if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash)
-        throw new Error("Custom registry requires an HTTPS URL without credentials, query, or fragment.");
+      if (
+        url.protocol !== "https:" ||
+        url.username ||
+        url.password ||
+        url.search ||
+        url.hash
+      )
+        throw new Error(
+          "Custom registry requires an HTTPS URL without credentials, query, or fragment.",
+        );
       return {
         url: url.toString(),
         host: url.host + url.pathname.replace(/\/$/, ""),
@@ -773,7 +782,11 @@ function publishOne(
 
   if (!config.token) {
     throw new Error(
-      registry === "github" ? "Set _GITHUB_TOKEN before publishing." : registry === "custom" ? "Set _CUSTOM_REGISTRY_TOKEN before publishing." : "Set _NPM_TOKEN before staging a release.",
+      registry === "github"
+        ? "Set _GITHUB_TOKEN before publishing."
+        : registry === "custom"
+          ? "Set _CUSTOM_REGISTRY_TOKEN before publishing."
+          : "Set _NPM_TOKEN before staging a release.",
     );
   }
 
@@ -892,7 +905,8 @@ export function publish({
   }
 
   if (registry === "custom") {
-    if (!registryUrl) throw new Error("--registry-url is required for custom publishing.");
+    if (!registryUrl)
+      throw new Error("--registry-url is required for custom publishing.");
     process.env.CUSTOM_REGISTRY_URL = registryUrl;
     registryConfig("custom");
   }

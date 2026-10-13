@@ -847,6 +847,7 @@ function publishOne(
 export function publish({
   selector,
   registry = "npm",
+  registryUrl,
   tag,
   access = "public",
   dryRun = false,
@@ -859,6 +860,7 @@ export function publish({
 }: {
   selector?: string;
   registry?: RegistrySelection;
+  registryUrl?: string;
   tag?: string;
   access?: PackageAccess;
   dryRun?: boolean;
@@ -890,8 +892,8 @@ export function publish({
   }
 
   if (registry === "custom") {
-    if (!options.registryUrl) throw new Error("--registry-url is required for custom publishing.");
-    process.env.CUSTOM_REGISTRY_URL = options.registryUrl;
+    if (!registryUrl) throw new Error("--registry-url is required for custom publishing.");
+    process.env.CUSTOM_REGISTRY_URL = registryUrl;
     registryConfig("custom");
   }
 
@@ -1232,6 +1234,7 @@ export function publishWorkspacePackage(
   const result = publish({
     selector: selectedPackage,
     registry: options.registry,
+    registryUrl: options.registryUrl,
     tag: options.tag,
     access: options.access,
     dryRun: options.dryRun,

@@ -14,6 +14,10 @@ Reusable GitHub workflows and standalone actions are released separately from `m
 - **Shared version modes** — Resolve `auto`, `bump`, `package-json`, and `exact` consistently for one or more selected workspaces, with JSON output for CI and reusable workflows.
 - **SemVer safeguards** — Validate current and resolved versions, detect invalid selections, and support stable and prerelease increments.
 
+### Publishing
+
+- **Custom HTTPS registries** — Publish to a custom registry with `workspace-publish --registry custom --registry-url <https-url>`, using `_CUSTOM_REGISTRY_TOKEN` for authenticated publication. Existing npm and GitHub Packages destinations remain available.
+
 ### Documentation and playground
 
 - **Heading anchors** — Add predictable slug anchors to rendered playground documentation.

@@ -3578,8 +3578,23 @@ function registryConfig(registry) {
         host: "registry.npmjs.org",
         token: process.env["_NPM_TOKEN"]
       };
+    case "custom": {
+      const raw = process.env.CUSTOM_REGISTRY_URL;
+      if (!raw)
+        throw new Error("CUSTOM_REGISTRY_URL is required for custom registry.");
+      const url = new URL(raw);
+      if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash)
+        throw new Error(
+          "Custom registry requires an HTTPS URL without credentials, query, or fragment."
+        );
+      return {
+        url: url.toString(),
+        host: url.host + url.pathname.replace(/\/$/, ""),
+        token: process.env["_CUSTOM_REGISTRY_TOKEN"]
+      };
+    }
     default:
-      throw new Error("Registry must be github, npm, all, or both.");
+      throw new Error("Registry must be github, npm, custom, all, or both.");
   }
 }
 function registryNpmEnvironment(config, npmrc) {
@@ -3943,7 +3958,7 @@ function publishOne(root, pkg, artifact, registry, tag, access, { quiet = false 
   const config = registryConfig(registry);
   if (!config.token) {
     throw new Error(
-      registry === "github" ? "Set _GITHUB_TOKEN before publishing." : "Set _NPM_TOKEN before staging a release."
+      registry === "github" ? "Set _GITHUB_TOKEN before publishing." : registry === "custom" ? "Set _CUSTOM_REGISTRY_TOKEN before publishing." : "Set _NPM_TOKEN before staging a release."
     );
   }
   const directory = mkdtempSync(join(tmpdir(), "workspace-publish-"));
@@ -3958,7 +3973,7 @@ function publishOne(root, pkg, artifact, registry, tag, access, { quiet = false 
   );
   const env = registryNpmEnvironment(config, npmrc);
   try {
-    if (registry === "github") {
+    if (registry === "github" || registry === "custom") {
       execFileSync(
         "npm",
         registryPublishArgs(registry, artifact.path, tag, access),
@@ -3994,6 +4009,7 @@ function publishOne(root, pkg, artifact, registry, tag, access, { quiet = false 
 function publish({
   selector,
   registry = "npm",
+  registryUrl,
   tag,
   access = "public",
   dryRun = false,
@@ -4013,8 +4029,14 @@ function publish({
   if (!["public", "restricted"].includes(access)) {
     throw new Error("Access must be public or restricted.");
   }
-  if (!["github", "npm", "all", "both"].includes(registry)) {
-    throw new Error("Registry must be github, npm, all, or both.");
+  if (!["github", "npm", "custom", "all", "both"].includes(registry)) {
+    throw new Error("Registry must be github, npm, custom, all, or both.");
+  }
+  if (registry === "custom") {
+    if (!registryUrl)
+      throw new Error("--registry-url is required for custom publishing.");
+    process.env.CUSTOM_REGISTRY_URL = registryUrl;
+    registryConfig("custom");
   }
   const root = repositoryRoot();
   if (dryRun && !selector) {
@@ -4234,6 +4256,7 @@ function publishWorkspacePackage(selector, options) {
   const result = publish({
     selector: selectedPackage,
     registry: options.registry,
+    registryUrl: options.registryUrl,
     tag: options.tag,
     access: options.access,
     dryRun: options.dryRun,
@@ -4323,8 +4346,8 @@ async function selectOne(choices, message) {
   return select({ message, choices });
 }
 program.name("workspace-publish").description("Validate and publish workspace packages.").option("--package <selector>", "Package name or directory").addOption(
-  new Option("-r, --registry <registry>", "Registry").choices(["github", "npm", "all", "both"]).default("npm")
-).option("-t, --tag <tag>", "npm distribution tag").addOption(
+  new Option("-r, --registry <registry>", "Registry").choices(["github", "npm", "all", "both", "custom"]).default("npm")
+).option("--registry-url <url>", "HTTPS URL for the custom registry").option("-t, --tag <tag>", "npm distribution tag").addOption(
   new Option("-a, --access <access>", "Package access").choices(["public", "restricted"]).default("public")
 ).option("-d, --dry-run", "Validate without publishing").option("-l, --list", "Show plan").option("-j, --json", "Output JSON").option("--artifact-directory <directory>", "Tarball output directory").option("--artifact-file <file>", "Use existing tarball").option("-w, --with-dependencies", "Include workspace dependencies").option("--no-verify-git-tag", "Skip tag verification").option("--no-interactive", "Never prompt").action(async (options) => {
   const canPrompt = options.interactive && !options.json && !process.env.CI && Boolean(process.stdin.isTTY && process.stderr.isTTY);

@@ -1,0 +1,24 @@
+name: Test npm registry matrix dry run
+on:
+  push:
+    branches:
+      - test/npm-matrix-dry-run-111
+  workflow_dispatch:
+permissions:
+  contents: write
+  packages: write
+  attestations: write
+  id-token: write
+jobs:
+  publish-test:
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@refactor/issue-111-single-matrix-path
+    with:
+      target-branch: main
+      package-directory: "."
+      registry: all
+      dry-run: true
+      verify-git-tag: false
+      node-version: "24"
+      workspace-tools-source: checkout:current
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}

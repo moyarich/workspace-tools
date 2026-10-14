@@ -1,4 +1,5 @@
 name: Test npm registry matrix dry run
+# Validate expected blocked publications without failing the dry run
 # Verify canonical tarball validation with previously published version
 on:
   push:

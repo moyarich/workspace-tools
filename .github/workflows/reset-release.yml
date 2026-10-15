@@ -9,7 +9,7 @@ on:
       package:
         description: Package selector
         required: true
-        default: "."
+        default: packages/workspace-tools
         type: string
       target-branch:
         description: Release target branch

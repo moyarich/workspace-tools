@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "apps/playground/**"
+      - "packages/workspace-tools/**"
       - "docs/**"
       - "examples/**"
       - ".github/workflows/pages.yml"

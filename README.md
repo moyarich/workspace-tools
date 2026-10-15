@@ -1,5 +1,7 @@
 # @moyarich/workspace-tools
 
+This repository is an npm monorepo: the published CLI lives in `packages/workspace-tools/`, the docs and examples remain at the root, and `apps/playground/` renders those root resources. Use `npm ci`, `npm test`, `npm run build`, and `npm run pack:check` from the repository root.
+
 Command-line tools for Node.js and npm workspaces: discover packages, validate dependency versions, maintain the root lockfile, prepare releases, publish packages, and inspect GitHub issue dependencies.
 
 Run the commands directly in a repository with `npm exec`, or compose them into scripts and CI workflows.

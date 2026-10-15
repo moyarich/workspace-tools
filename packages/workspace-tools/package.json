@@ -1,0 +1,60 @@
+{
+  "name": "@moyarich/workspace-tools",
+  "version": "0.2.1",
+  "description": "CLI tooling for Node.js workspaces, package discovery, releases, publishing, dependency checks, and repository automation.",
+  "keywords": [
+    "workspace",
+    "monorepo",
+    "npm",
+    "release",
+    "publishing",
+    "ci",
+    "cli",
+    "automation",
+    "developer-tools",
+    "workspace-tools",
+    "release-draft"
+  ],
+  "homepage": "https://github.com/moyarich/workspace-tools#readme",
+  "bugs": {
+    "url": "https://github.com/moyarich/workspace-tools/issues"
+  },
+  "publisher": "moyarich",
+  "author": "Moya Richards",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moyarich/workspace-tools.git",
+    "directory": "packages/workspace-tools"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "npm@11",
+  "files": [
+    "dist/bin"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.cli.config.ts --mode issue-dependency-tree && vite build --config vite.cli.config.ts --mode discover-packages && vite build --config vite.cli.config.ts --mode workspace-release && vite build --config vite.cli.config.ts --mode sim-version-resolver && vite build --config vite.cli.config.ts --mode workspace-publish && vite build --config vite.cli.config.ts --mode workspace-dependency-check && vite build --config vite.cli.config.ts --mode workspace-package-lock && vite build --config vite.cli.config.ts --mode workspace-release-identity",
+    "test": "vitest run tests",
+    "pack:check": "npm pack --dry-run"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "bin": {
+    "issue-dependency-tree": "dist/bin/issue-dependency-tree.mjs",
+    "discover-packages": "dist/bin/discover-packages.mjs",
+    "workspace-release": "dist/bin/workspace-release.mjs",
+    "sim-version-resolver": "dist/bin/sim-version-resolver.mjs",
+    "workspace-publish": "dist/bin/workspace-publish.mjs",
+    "workspace-dependency-check": "dist/bin/workspace-dependency-check.mjs",
+    "workspace-package-lock": "dist/bin/workspace-package-lock.mjs",
+    "workspace-release-identity": "dist/bin/workspace-release-identity.mjs"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.0.0",
+    "semver": "^7.7.3"
+  }
+}

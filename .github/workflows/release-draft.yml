@@ -121,7 +121,8 @@ jobs:
       release-tag: ""
       tag-prefix: ${{ format('{0}@', matrix.name) }}
       release-name: ${{ format('{0} v$RESOLVED_VERSION', matrix.name) }}
-      changelog-path: ${{ matrix.directory == '.' && 'CHANGELOG.md' || format('{0}/CHANGELOG.md', matrix.directory) }}
+      changelog-path: ${{ format('{0}/CHANGELOG.md', matrix.directory) }}
+      # Resolved from reusable-workflows when no caller-local template exists.
       template-path: .github/release-drafter-package-template.yml
       package-name: ${{ matrix.name }}
       package-directory: ${{ matrix.directory }}

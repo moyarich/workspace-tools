@@ -33,7 +33,9 @@
   },
   "packageManager": "npm@11",
   "files": [
-    "dist/bin"
+    "dist/bin",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "vite build --config vite.cli.config.ts --mode issue-dependency-tree && vite build --config vite.cli.config.ts --mode discover-packages && vite build --config vite.cli.config.ts --mode workspace-release && vite build --config vite.cli.config.ts --mode sim-version-resolver && vite build --config vite.cli.config.ts --mode workspace-publish && vite build --config vite.cli.config.ts --mode workspace-dependency-check && vite build --config vite.cli.config.ts --mode workspace-package-lock && vite build --config vite.cli.config.ts --mode workspace-release-identity",

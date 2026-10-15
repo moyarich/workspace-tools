@@ -18,16 +18,6 @@ Reusable GitHub workflows and standalone actions are released separately from `m
 
 - **Custom HTTPS registries** — Publish to a custom registry with `workspace-publish --registry custom --registry-url <https-url>`, using `_CUSTOM_REGISTRY_TOKEN` for authenticated publication. Existing npm and GitHub Packages destinations remain available.
 
-### Documentation and playground
-
-- **Heading anchors** — Add predictable slug anchors to rendered playground documentation.
-- **MDX icons** — Support Lucide icons in playground MDX content.
-- **Outline navigation** — Correct selection of the last “On this page” heading when reaching the bottom of a document.
-
-### Maintenance
-
-- **CI safety** — Validate pull requests while guarding production workflows from unintended execution.
-
 ## [0.2.0]
 
 ### Breaking changes

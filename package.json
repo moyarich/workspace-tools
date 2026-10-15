@@ -13,10 +13,11 @@
   "scripts": {
     "dev": "npm run dev -w @moyarich/workspace-tools-playground",
     "build:playground": "npm run build -w @moyarich/workspace-tools-playground",
-    "test": "vitest run",
+    "test": "npm run test --workspaces --if-present",
     "build": "npm run build -w @moyarich/workspace-tools",
     "build:clis": "npm run build -w @moyarich/workspace-tools",
-    "pack:check": "npm pack -w @moyarich/workspace-tools --dry-run"
+    "pack:check": "npm pack -w @moyarich/workspace-tools --dry-run",
+    "build:all": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
     "@types/semver": "^7.7.1",

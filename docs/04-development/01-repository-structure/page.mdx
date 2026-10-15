@@ -11,7 +11,7 @@ This repository owns **Workspace Tools' command-line implementations and npm pac
 apps/playground/          # documentation/example presentation application
 docs/                    # source documentation and maintainer guidance
 examples/                # copyable CLI usage examples and explanations
-src/
+packages/workspace-tools/src/
   discover-packages/
   dependency-check/
   issue-dependency-tree/
@@ -21,10 +21,10 @@ src/
   release-identity/
   sim-version-resolver/
   workspace/             # shared workspace/package utilities
-tests/                   # Vitest tests grouped by capability
-dist/bin/                # committed, generated executable .mjs bundles
-vite.cli.config.ts       # CLI bundle configuration
-package.json             # npm exports, bin map, scripts, and publish configuration
+packages/workspace-tools/tests/ # Vitest tests grouped by capability
+packages/workspace-tools/dist/bin/ # committed, generated executable .mjs bundles
+packages/workspace-tools/vite.cli.config.ts # CLI bundle configuration
+packages/workspace-tools/package.json # npm exports, bin map, scripts, and publish configuration
 .github/workflows/       # this repository's callers of reusable workflows
 ```
 
@@ -46,7 +46,7 @@ From the repository root:
 npm ci
 npm test
 npm run build
-npm pack --dry-run
+npm run pack:check
 ```
 
 `npm run build` builds the CLIs using `vite.cli.config.ts`. The published npm tarball includes `dist/bin` via `package.json#files`, not the development sources, docs, tests, or playground. `npm pack --dry-run` is the easiest way to inspect the publishable file list.
@@ -68,7 +68,7 @@ Only command paths declared in `package.json#bin` are installation entrypoints. 
 
 ## Committed distribution
 
-`dist/bin/` is tracked intentionally so a checked-out Git revision has its matching executable builds. After changes to `src/` or the CLI build configuration, run `npm run build` and commit the resulting `dist/bin/` differences. The `check-dist.yml` CI job rebuilds and compares the committed bundles, and fails if they are stale.
+`packages/workspace-tools/dist/bin/` is tracked intentionally so a checked-out Git revision has its matching executable builds. After changes to `src/` or the CLI build configuration, run `npm run build` and commit the resulting `packages/workspace-tools/dist/bin/` differences. The `check-dist.yml` CI job rebuilds and compares the committed bundles, and fails if they are stale.
 
 `self-heal.yml` can regenerate formatting, lockfile, and dist changes on a branch, but a passing **CI run at the latest commit** remains the verification boundary. Do not assume that an earlier passing run covers later self-healing commits.
 

@@ -69,7 +69,7 @@ jobs:
     with:
       packages-directory: packages
       use-workspaces: true
-      include-root-package: true
+      include-root-package: false
       require-publish-config: true
       workspace-tools-source: checkout:current
 
@@ -119,7 +119,7 @@ jobs:
       version-bump: ${{ needs.select-packages.outputs.version-bump }}
       exact-version: ${{ needs.select-packages.outputs.exact-version }}
       release-tag: ""
-      tag-prefix: ${{ matrix.directory == '.' && format('{0}@', matrix.name) || format('{0}@', matrix.directory) }}
+      tag-prefix: ${{ format('{0}@', matrix.name) }}
       release-name: ${{ format('{0} v$RESOLVED_VERSION', matrix.name) }}
       changelog-path: ${{ matrix.directory == '.' && 'CHANGELOG.md' || format('{0}/CHANGELOG.md', matrix.directory) }}
       template-path: .github/release-drafter-package-template.yml

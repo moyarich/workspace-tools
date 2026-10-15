@@ -14,16 +14,16 @@ npm install --save-dev @moyarich/workspace-tools
 
 ## Commands
 
-| CLI | Purpose |
-| --- | --- |
-| `discover-packages` | Discover packages and npm workspaces |
+| CLI                          | Purpose                                             |
+| ---------------------------- | --------------------------------------------------- |
+| `discover-packages`          | Discover packages and npm workspaces                |
 | `workspace-dependency-check` | Check dependency versions and workspace consistency |
-| `workspace-package-lock` | Inspect or update a root npm lockfile |
-| `workspace-release` | Resolve and prepare package releases |
+| `workspace-package-lock`     | Inspect or update a root npm lockfile               |
+| `workspace-release`          | Resolve and prepare package releases                |
 | `workspace-release-identity` | Determine canonical release identities and versions |
-| `sim-version-resolver` | Preview semantic version changes |
-| `workspace-publish` | Validate and publish package artifacts |
-| `issue-dependency-tree` | Inspect GitHub issue dependencies |
+| `sim-version-resolver`       | Preview semantic version changes                    |
+| `workspace-publish`          | Validate and publish package artifacts              |
+| `issue-dependency-tree`      | Inspect GitHub issue dependencies                   |
 
 Run any tool with `npm exec` or consult its `--help` output:
 

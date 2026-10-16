@@ -24,3 +24,5 @@ jobs:
       packages-directory: packages
       use-workspaces: true
       require-publish-config: true
+    secrets:
+      workflow-token: ${{ secrets._WORKFLOW_TOKEN }}

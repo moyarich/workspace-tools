@@ -1,0 +1,24 @@
+name: Sync release package choices
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - packages/**/package.json
+      - .github/workflows/release.yml
+      - .github/workflows/sync-release-package-choices.yml
+
+permissions: {}
+
+jobs:
+  sync:
+    permissions:
+      contents: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_sync-release-package-choices.yml@main
+    with:
+      workflow-file: .github/workflows/release.yml
+      packages-directory: packages
+      use-workspaces: true
+      require-publish-config: true

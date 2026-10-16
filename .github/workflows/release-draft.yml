@@ -7,10 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: Package selector (all, package name, ".", or any workspace directory)
+        description: Select a publishable workspace package
         required: true
         default: all
-        type: string
+        type: choice
+        options:
+          - all
+          - packages/workspace-tools
       version-mode:
         description: Version mode
         required: true

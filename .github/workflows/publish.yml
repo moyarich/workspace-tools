@@ -9,8 +9,8 @@ on:
       package:
         description: Select a publishable workspace package
         required: true
-        default: all
         type: choice
+        default: all
         options:
           - all
           - packages/workspace-tools

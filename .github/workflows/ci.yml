@@ -31,6 +31,18 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-      - run: npm ci --ignore-scripts
+      - run: npm ci --include=optional
+      - name: Validate publishable package changelog
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const manifest = JSON.parse(readFileSync("packages/workspace-tools/package.json", "utf8"));
+          const changelog = readFileSync("packages/workspace-tools/CHANGELOG.md", "utf8");
+          const version = manifest.version.replace(/[.*+?^${}()|[\]\\]/g, "\\      - run: npm ci --ignore-scripts");
+          if (!new RegExp(`^## \\[(?:${version})\\]`, "m").test(changelog)) {
+            throw new Error(`Missing ${manifest.version} changelog entry`);
+          }
+          NODE
       - run: npm test
       - run: npm run pack:check

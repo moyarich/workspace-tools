@@ -1,6 +1,6 @@
 {
   "name": "@moyarich/workspace-tools",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "description": "CLI tooling for Node.js workspaces, package discovery, releases, publishing, dependency checks, and repository automation.",
   "keywords": [
     "workspace",

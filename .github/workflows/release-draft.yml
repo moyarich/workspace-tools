@@ -13,7 +13,6 @@ on:
         default: all
         options:
           - all
-          - packages/workspace-tools
       version-mode:
         description: Version mode
         required: true

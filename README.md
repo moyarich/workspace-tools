@@ -167,10 +167,10 @@ npm exec -- workspace-release --package . --mode bump --version patch --dry-run
 npm exec -- workspace-release-identity --package . --pretty-json
 ```
 
-For example, `@moyarich/workspace-tools` version `0.2.1` resolves to the tag:
+For example, `@moyarich/workspace-tools` version `0.2.2` resolves to the tag:
 
 ```text
-@moyarich/workspace-tools@0.2.1
+@moyarich/workspace-tools@0.2.2
 ```
 
 ### Publish a package

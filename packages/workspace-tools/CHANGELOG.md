@@ -6,6 +6,18 @@ Reusable GitHub workflows and standalone actions are released separately from `m
 
 ## Unreleased
 
+## [0.2.2]
+
+### Package and documentation
+
+- **npm workspace monorepo** — Distribute the CLI from `packages/workspace-tools` while maintaining the package's commands and dedicated documentation.
+- **Package-focused release notes** — Keep the published CLI changelog and README focused on installable command-line capabilities rather than repository workflow maintenance.
+
+### Maintenance
+
+- **Updated workflow integration** — Align repository release and publication callers with the shared reusable workflow contracts.
+
+
 ## [0.2.1]
 
 ### Release version resolution

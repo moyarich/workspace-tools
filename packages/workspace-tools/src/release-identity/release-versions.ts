@@ -55,15 +55,23 @@ export function resolveReleaseVersions<T extends VersionedPackage>(
     if (mode === "bump") version = semver.inc(current, bump) ?? "";
     if (mode === "auto") {
       const prefix = (pkg.directory === "." ? pkg.name : pkg.directory) + "@";
-      const previous = listTags(prefix)
-        .filter((tag) => tag.startsWith(prefix))
-        .map((tag) => tag.slice(prefix.length))
+      const prefixes = [...new Set([prefix, `${pkg.name}@`])];
+      const previous = prefixes
+        .flatMap((tagPrefix) =>
+          listTags(tagPrefix)
+            .filter((tag) => tag.startsWith(tagPrefix))
+            .map((tag) => tag.slice(tagPrefix.length)),
+        )
         .filter((v) => semver.valid(v) && !semver.prerelease(v))
         .sort(semver.compare)
         .at(-1);
-      version = previous
-        ? (semver.inc(previous, "patch") ?? "")
-        : initialVersion;
+      // Never roll back an existing manifest, even if tags are missing.
+      const baseline =
+        previous && semver.gt(previous, current) ? previous : current;
+      version =
+        previous || semver.gt(current, initialVersion)
+          ? (semver.inc(baseline, "patch") ?? "")
+          : initialVersion;
     }
     if (!semver.valid(version))
       throw new Error(`Invalid resolved version for ${pkg.name}: ${version}`);

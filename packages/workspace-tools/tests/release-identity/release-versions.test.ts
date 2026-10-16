@@ -50,8 +50,12 @@ describe("resolveReleaseVersions", () => {
   it("respects legacy package-name tags and never downgrades an existing manifest", () => {
     const tags = (prefix: string) =>
       prefix === "@example/core@" ? ["@example/core@0.2.1"] : [];
-    expect(resolveReleaseVersions(packages, { mode: "auto" }, tags)[0].version).toBe("0.2.2");
-    expect(resolveReleaseVersions(packages, { mode: "auto" }, () => [])[1].version).toBe("1.0.1");
+    expect(
+      resolveReleaseVersions(packages, { mode: "auto" }, tags)[0].version,
+    ).toBe("0.2.2");
+    expect(
+      resolveReleaseVersions(packages, { mode: "auto" }, () => [])[1].version,
+    ).toBe("1.0.1");
   });
 
   it("supports major, minor, patch and prerelease bumps", () => {

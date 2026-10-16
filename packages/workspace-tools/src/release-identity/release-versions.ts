@@ -66,10 +66,12 @@ export function resolveReleaseVersions<T extends VersionedPackage>(
         .sort(semver.compare)
         .at(-1);
       // Never roll back an existing manifest, even if tags are missing.
-      const baseline = previous && semver.gt(previous, current) ? previous : current;
-      version = previous || semver.gt(current, initialVersion)
-        ? (semver.inc(baseline, "patch") ?? "")
-        : initialVersion;
+      const baseline =
+        previous && semver.gt(previous, current) ? previous : current;
+      version =
+        previous || semver.gt(current, initialVersion)
+          ? (semver.inc(baseline, "patch") ?? "")
+          : initialVersion;
     }
     if (!semver.valid(version))
       throw new Error(`Invalid resolved version for ${pkg.name}: ${version}`);

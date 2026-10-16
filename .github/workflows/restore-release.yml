@@ -7,10 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: "Package selector: all, package name, or directory"
+        description: Select a publishable workspace package
         required: true
-        default: packages/workspace-tools
-        type: string
+        type: choice
+        default: all
+        options:
+          - all
+          - packages/workspace-tools
       target-branch:
         description: Branch used to resolve the package path and changelog
         required: true

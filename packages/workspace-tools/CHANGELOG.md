@@ -17,7 +17,6 @@ Reusable GitHub workflows and standalone actions are released separately from `m
 
 - **Updated workflow integration** — Align repository release and publication callers with the shared reusable workflow contracts.
 
-
 ## [0.2.1]
 
 ### Release version resolution

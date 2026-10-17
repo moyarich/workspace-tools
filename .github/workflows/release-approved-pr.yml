@@ -15,9 +15,8 @@ jobs:
     permissions:
       contents: read
     outputs:
-      package: ${{ steps.plan.outputs.package }}
-      version: ${{ steps.plan.outputs.version }}
-      tag: ${{ steps.plan.outputs.tag }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,13 +35,8 @@ jobs:
           npm ci --ignore-scripts --include=optional
           npm run build --workspace @moyarich/workspace-tools
           plan="$(node packages/workspace-tools/dist/bin/workspace-approved-release.mjs --root . --manifest .release/prepared.json --expected-sha "$EXPECTED_SHA")"
-          if [ "$(jq '.packages | length' <<< "$plan")" -ne 1 ] || [ "$(jq -r '.packages[0].name' <<< "$plan")" != '@moyarich/workspace-tools' ]; then
-            echo "::error::Automatic release requires exactly @moyarich/workspace-tools; other release manifests fail closed."
-            exit 1
-          fi
-          echo "package=$(jq -r '.packages[0].directory' <<< "$plan")" >> "$GITHUB_OUTPUT"
-          echo "version=$(jq -r '.packages[0].version' <<< "$plan")" >> "$GITHUB_OUTPUT"
-          echo "tag=$(jq -r '.packages[0].tag' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(jq -c '{include:.packages}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "count=$(jq -r '.packages | length' <<< "$plan")" >> "$GITHUB_OUTPUT"
           {
             echo "## Approved release"
             echo
@@ -52,34 +46,20 @@ jobs:
   release:
     name: Release approved package
     needs: validate
-    if: ${{ needs.validate.result == 'success' }}
+    if: ${{ needs.validate.result == 'success' && needs.validate.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.validate.outputs.matrix) }}
     permissions:
       contents: write
-      actions: read
-      pull-requests: read
     uses: moyarich/reusable-workflows/.github/workflows/reusable_release.yml@main
     with:
-      version: ${{ needs.validate.outputs.version }}
-      release-tag: ${{ needs.validate.outputs.tag }}
-      release-name: ${{ format('@moyarich/workspace-tools v{0}', needs.validate.outputs.version) }}
-      changelog-file: packages/workspace-tools/CHANGELOG.md
+      version: ${{ matrix.version }}
+      release-tag: ${{ matrix.tag }}
+      release-name: ${{ format('{0} v{1}', matrix.name, matrix.version) }}
+      changelog-file: ${{ format('{0}/CHANGELOG.md', matrix.directory) }}
       target-ref: ${{ github.event.pull_request.merge_commit_sha }}
       create-tag: true
       draft: false
       dry-run: false
-  publish:
-    name: Publish approved package
-    needs: [validate, release]
-    if: ${{ needs.validate.result == 'success' && needs.release.result == 'success' }}
-    permissions:
-      contents: write
-      packages: write
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
-    with:
-      package-directory: ${{ needs.validate.outputs.package }}
-      registry: npm
-      version-mode: package-json
-      verify-git-tag: true
-      dry-run: false
-    secrets:
-      npm-token: ${{ secrets._NPM_TOKEN }}

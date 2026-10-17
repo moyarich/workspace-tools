@@ -1,4 +1,4 @@
-name: Validate approved release preparation
+name: Release approved preparation PR
 
 on:
   pull_request:
@@ -8,10 +8,15 @@ on:
 permissions: {}
 
 jobs:
-  verify:
-    name: Verify merged release preparation
+  approved-release:
+    name: Verify, release and publish approved packages
+    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release/prepare-') }}
     permissions:
-      contents: read
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_verify-release-preparation.yml@feat/release-preparation-pr
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_approved-release.yml@feat/approved-release-publish
     with:
       expected-base: main
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}

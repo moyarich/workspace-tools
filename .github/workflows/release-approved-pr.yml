@@ -1,0 +1,79 @@
+name: Release approved preparation PR
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+permissions: {}
+concurrency:
+  group: approved-release-${{ github.repository }
+  cancel-in-progress: false
+jobs:
+  validate:
+    name: Validate approved release manifest
+    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release/prepare-') }
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      package: ${{ steps.plan.outputs.package }
+      version: ${{ steps.plan.outputs.version }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate exact merged commit and release plan
+        id: plan
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.merge_commit_sha }
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --include=optional
+          npm run build --workspace @moyarich/workspace-tools
+          plan="$(node packages/workspace-tools/dist/bin/workspace-approved-release.mjs --root . --manifest .release/prepared.json --expected-sha "$EXPECTED_SHA")"
+          if [ "$(jq '.packages | length' <<< "$plan")" -ne 1 ] || [ "$(jq -r '.packages[0].name' <<< "$plan")" != '@moyarich/workspace-tools' ]; then
+            echo "::error::Automatic release requires exactly @moyarich/workspace-tools; other release manifests fail closed."
+            exit 1
+          fi
+          echo "package=$(jq -r '.packages[0].directory' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.packages[0].version' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Approved release"
+            echo
+            echo "Merged SHA: $EXPECTED_SHA"
+            jq -r '.packages[] | "- \(.name)@\(.version) (\(.directory))"' <<< "$plan"
+          } >> "$GITHUB_STEP_SUMMARY"
+  release:
+    name: Release approved package
+    needs: validate
+    if: ${{ needs.validate.result == 'success' }
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_workspace-package-release.yml@main
+    with:
+      package: ${{ needs.validate.outputs.package }
+      version-mode: package-json
+      draft: false
+      dry-run: false
+  publish:
+    name: Publish approved package
+    needs: [validate, release]
+    if: ${{ needs.validate.result == 'success' && needs.release.result == 'success' }
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ needs.validate.outputs.package }
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }

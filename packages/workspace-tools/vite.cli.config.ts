@@ -11,7 +11,8 @@ const entries: Record<string, string> = {
   "workspace-dependency-check": "src/dependency-check/dependency-check-cli.ts",
   "workspace-package-lock": "src/package-lock/package-lock-cli.ts",
   "workspace-release-identity": "src/release-identity/release-identity-cli.ts",
-  "workspace-approved-release": "src/release-identity/workspace-approved-release.ts",
+  "workspace-approved-release":
+    "src/release-identity/workspace-approved-release.ts",
 };
 
 export default defineConfig(({ mode }) => {

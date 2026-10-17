@@ -17,6 +17,14 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       count: ${{ steps.plan.outputs.count }}
+      stage-0: ${{ steps.plan.outputs.stage-0 }}
+      stage-1: ${{ steps.plan.outputs.stage-1 }}
+      stage-2: ${{ steps.plan.outputs.stage-2 }}
+      stage-3: ${{ steps.plan.outputs.stage-3 }}
+      stage-4: ${{ steps.plan.outputs.stage-4 }}
+      stage-5: ${{ steps.plan.outputs.stage-5 }}
+      stage-6: ${{ steps.plan.outputs.stage-6 }}
+      stage-7: ${{ steps.plan.outputs.stage-7 }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,6 +45,15 @@ jobs:
           plan="$(node packages/workspace-tools/dist/bin/workspace-approved-release.mjs --root . --manifest .release/prepared.json --expected-sha "$EXPECTED_SHA")"
           echo "matrix=$(jq -c '{include:.packages}' <<< "$plan")" >> "$GITHUB_OUTPUT"
           echo "count=$(jq -r '.packages | length' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-0=$(jq -c --argjson level '0' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-1=$(jq -c --argjson level '1' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-2=$(jq -c --argjson level '2' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-3=$(jq -c --argjson level '3' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-4=$(jq -c --argjson level '4' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-5=$(jq -c --argjson level '5' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-6=$(jq -c --argjson level '6' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "stage-7=$(jq -c --argjson level '7' '{include: [.packages[] | select(.stage == $level)]}' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          if [ "$(jq '.stages | length' <<< "$plan")" -gt 8 ]; then echo "::error::More than 8 dependency levels"; exit 1; fi
           {
             echo "## Approved release"
             echo
@@ -63,3 +80,171 @@ jobs:
       create-tag: true
       draft: false
       dry-run: false
+
+  publish-0:
+    name: Publish approved dependency stage 1
+    needs: [validate, release]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && fromJSON(needs.validate.outputs.stage-0).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-0) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-1:
+    name: Publish approved dependency stage 2
+    needs: [validate, release, publish-0]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-0'].result == 'success' || needs['publish-0'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-1).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-1) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-2:
+    name: Publish approved dependency stage 3
+    needs: [validate, release, publish-1]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-1'].result == 'success' || needs['publish-1'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-2).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-2) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-3:
+    name: Publish approved dependency stage 4
+    needs: [validate, release, publish-2]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-2'].result == 'success' || needs['publish-2'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-3).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-3) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-4:
+    name: Publish approved dependency stage 5
+    needs: [validate, release, publish-3]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-3'].result == 'success' || needs['publish-3'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-4).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-4) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-5:
+    name: Publish approved dependency stage 6
+    needs: [validate, release, publish-4]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-4'].result == 'success' || needs['publish-4'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-5).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-5) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-6:
+    name: Publish approved dependency stage 7
+    needs: [validate, release, publish-5]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-5'].result == 'success' || needs['publish-5'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-6).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-6) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}
+
+  publish-7:
+    name: Publish approved dependency stage 8
+    needs: [validate, release, publish-6]
+    if: ${{ always() && needs.validate.result == 'success' && needs.release.result == 'success' && (needs['publish-6'].result == 'success' || needs['publish-6'].result == 'skipped') && fromJSON(needs.validate.outputs.stage-7).include[0] != null }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.validate.outputs.stage-7) }}
+    permissions:
+      contents: write
+      packages: write
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
+    with:
+      package-directory: ${{ matrix.directory }}
+      registry: npm
+      version-mode: package-json
+      verify-git-tag: true
+      dry-run: false
+    secrets:
+      npm-token: ${{ secrets._NPM_TOKEN }}

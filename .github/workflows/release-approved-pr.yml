@@ -5,22 +5,23 @@ on:
     branches: [main]
 permissions: {}
 concurrency:
-  group: approved-release-${{ github.repository }
+  group: approved-release-${{ github.repository }}
   cancel-in-progress: false
 jobs:
   validate:
     name: Validate approved release manifest
-    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release/prepare-') }
+    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release/prepare-') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      package: ${{ steps.plan.outputs.package }
-      version: ${{ steps.plan.outputs.version }
+      package: ${{ steps.plan.outputs.package }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
@@ -28,7 +29,7 @@ jobs:
       - name: Validate exact merged commit and release plan
         id: plan
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.merge_commit_sha }
+          EXPECTED_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -41,6 +42,7 @@ jobs:
           fi
           echo "package=$(jq -r '.packages[0].directory' <<< "$plan")" >> "$GITHUB_OUTPUT"
           echo "version=$(jq -r '.packages[0].version' <<< "$plan")" >> "$GITHUB_OUTPUT"
+          echo "tag=$(jq -r '.packages[0].tag' <<< "$plan")" >> "$GITHUB_OUTPUT"
           {
             echo "## Approved release"
             echo
@@ -50,30 +52,34 @@ jobs:
   release:
     name: Release approved package
     needs: validate
-    if: ${{ needs.validate.result == 'success' }
+    if: ${{ needs.validate.result == 'success' }}
     permissions:
       contents: write
       actions: read
       pull-requests: read
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_workspace-package-release.yml@main
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_release.yml@main
     with:
-      package: ${{ needs.validate.outputs.package }
-      version-mode: package-json
+      version: ${{ needs.validate.outputs.version }}
+      release-tag: ${{ needs.validate.outputs.tag }}
+      release-name: ${{ format('@moyarich/workspace-tools v{0}', needs.validate.outputs.version) }}
+      changelog-file: packages/workspace-tools/CHANGELOG.md
+      target-ref: ${{ github.event.pull_request.merge_commit_sha }}
+      create-tag: true
       draft: false
       dry-run: false
   publish:
     name: Publish approved package
     needs: [validate, release]
-    if: ${{ needs.validate.result == 'success' && needs.release.result == 'success' }
+    if: ${{ needs.validate.result == 'success' && needs.release.result == 'success' }}
     permissions:
       contents: write
       packages: write
     uses: moyarich/reusable-workflows/.github/workflows/reusable_npm-publish.yml@main
     with:
-      package-directory: ${{ needs.validate.outputs.package }
+      package-directory: ${{ needs.validate.outputs.package }}
       registry: npm
       version-mode: package-json
       verify-git-tag: true
       dry-run: false
     secrets:
-      npm-token: ${{ secrets._NPM_TOKEN }
+      npm-token: ${{ secrets._NPM_TOKEN }}

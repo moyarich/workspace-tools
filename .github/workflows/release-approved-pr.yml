@@ -1,0 +1,17 @@
+name: Validate approved release preparation
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  verify:
+    name: Verify merged release preparation
+    permissions:
+      contents: read
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_verify-release-preparation.yml@feat/release-preparation-pr
+    with:
+      expected-base: main

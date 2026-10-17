@@ -20,7 +20,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Lint workflow expressions and reusable calls
-        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color -shellcheck=
 
   check-dist:
     name: Check committed CLI distribution

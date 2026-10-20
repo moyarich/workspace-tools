@@ -163,9 +163,13 @@ export function discoverPackagesReport(options: DiscoverPackagesOptions) {
   for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
     const reasons: string[] = [];
     if (pkg.private && !options.includePrivate)
-      reasons.push("npm cannot publish packages with private: true; remove this field or set it to false.");
+      reasons.push(
+        "npm cannot publish packages with private: true; remove this field or set it to false.",
+      );
     if (options.requirePublishConfig && !pkg.hasPublishConfig)
-      reasons.push("The --require-publish-config filter requires publishConfig; npm does not require it for publishing.");
+      reasons.push(
+        "The --require-publish-config filter requires publishConfig; npm does not require it for publishing.",
+      );
     if (options.requireTestScript && !pkg.hasTest)
       reasons.push("Add scripts.test to package.json.");
     if (options.requireBuildScript && !pkg.hasBuild)

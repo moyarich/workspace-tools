@@ -58,6 +58,9 @@ on:
         default: true
         type: boolean
 
+  push:
+    branches: [main]
+
 permissions: {}
 
 jobs:

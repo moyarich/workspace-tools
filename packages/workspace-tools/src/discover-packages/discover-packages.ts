@@ -46,13 +46,23 @@ function packageFromManifest(
       ? { scope: String(manifest.name ?? fallbackName).split("/")[0] }
       : {}),
     publishable: manifest.private !== true,
-    hasPublishConfig: manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
-    ...(manifest.publishConfig?.access === "public" || manifest.publishConfig?.access === "restricted" ? { access: manifest.publishConfig.access } : {}),
-    guidance: manifest.private === true
-      ? ["Remove private: true to allow npm publish."]
-      : /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) && manifest.publishConfig?.access !== "public"
-        ? ["For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately."]
-        : [],
+    hasPublishConfig:
+      manifest.publishConfig !== null &&
+      typeof manifest.publishConfig === "object" &&
+      !Array.isArray(manifest.publishConfig),
+    ...(manifest.publishConfig?.access === "public" ||
+    manifest.publishConfig?.access === "restricted"
+      ? { access: manifest.publishConfig.access }
+      : {}),
+    guidance:
+      manifest.private === true
+        ? ["Remove private: true to allow npm publish."]
+        : /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) &&
+            manifest.publishConfig?.access !== "public"
+          ? [
+              "For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately.",
+            ]
+          : [],
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string",
   };

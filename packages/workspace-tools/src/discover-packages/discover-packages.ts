@@ -17,6 +17,8 @@ export type DiscoveredPackage = {
   name: string;
   version: string;
   private: boolean;
+  scoped: boolean;
+  scope?: string;
   publishable?: boolean;
   hasTest?: boolean;
   hasBuild?: boolean;
@@ -36,6 +38,8 @@ function packageFromManifest(
     name: manifest.name ?? fallbackName,
     version: manifest.version ?? "0.0.0",
     private: manifest.private === true,
+    scoped: /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName),
+    ...(/^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) ? { scope: String(manifest.name ?? fallbackName).split('/')[0] } : {}),
     publishable:
       manifest.private !== true &&
       manifest.publishConfig !== null &&
@@ -141,7 +145,7 @@ export function discoverPackagesReport(options: DiscoverPackagesOptions) {
     const reasons: string[] = [];
     if (pkg.private && !options.includePrivate)
       reasons.push("Private package: set private to false to publish.");
-    if (options.requirePublishConfig && !pkg.publishable)
+    if (options.requirePublishConfig && !pkg.publishable && !pkg.private)
       reasons.push(
         pkg.private
           ? "Private packages cannot be published."
@@ -154,7 +158,7 @@ export function discoverPackagesReport(options: DiscoverPackagesOptions) {
     if (reasons.length) filtered.push({ package: pkg, reasons });
     else included.push(pkg);
   }
-  return { included, filtered };
+  return { included, filtered, total: included.length + filtered.length };
 }
 
 export function discoverPackages(

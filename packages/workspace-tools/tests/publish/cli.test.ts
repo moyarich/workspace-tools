@@ -39,7 +39,7 @@ for (const command of [
   });
 }
 
-test("package discovery preserves its default directory and JSON output", () => {
+test("package discovery reports included and filtered packages in JSON", () => {
   const result = invoke(
     "dist/bin/discover-packages.mjs",
     "--workspaces",
@@ -49,12 +49,18 @@ test("package discovery preserves its default directory and JSON output", () => 
   );
   expect(result.status).toBe(0);
   expect(JSON.parse(result.stdout)).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        name: "@moyarich/workspace-tools",
-        directory: ".",
-      }),
-    ]),
+    expect.objectContaining({
+      included: expect.arrayContaining([
+        expect.objectContaining({
+          name: "@moyarich/workspace-tools",
+          directory: ".",
+          scoped: true,
+          scope: "@moyarich",
+        }),
+      ]),
+      filtered: expect.any(Array),
+      total: expect.any(Number),
+    }),
   );
 });
 

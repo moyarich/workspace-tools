@@ -72,20 +72,20 @@ program
       if (process.env.GITHUB_STEP_SUMMARY)
         appendFileSync(
           process.env.GITHUB_STEP_SUMMARY,
-          rows.join("\\n") + "\\n",
+          rows.join("\n") + "\n",
         );
       for (const { package: pkg, reasons } of report.filtered) {
         const encode = (text: string) =>
           text
             .replaceAll("%", "%25")
-            .replaceAll("\\r", "%0D")
-            .replaceAll("\\n", "%0A");
+            .replaceAll("\r", "%0D")
+            .replaceAll("\n", "%0A");
         process.stderr.write(
           "::warning file=" +
             encode(pkg.directory + "/package.json") +
             ",title=Package filtered::" +
             encode(pkg.name + ": " + reasons.join(" ")) +
-            "\\n",
+            "\n",
         );
       }
     }

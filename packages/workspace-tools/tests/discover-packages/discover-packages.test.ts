@@ -74,6 +74,8 @@ describe("discoverPackages", () => {
         name: "@moya/public",
         version: "1.2.3",
         private: false,
+        scoped: true,
+        scope: "@moya",
         publishable: true,
         hasTest: true,
         hasBuild: true,
@@ -125,6 +127,8 @@ describe("discoverPackages", () => {
       version: "0.1.0",
       private: false,
       publishable: true,
+      scoped: true,
+      scope: "@moyarich",
     });
   });
 
@@ -180,6 +184,8 @@ describe("discoverPackages", () => {
     expect(report.included.map((pkg) => pkg.name)).toEqual([
       "@moyarich/css-expand-collapse",
     ]);
+    expect(report.included[0]).toMatchObject({ scoped: true, scope: "@moyarich", publishable: true });
+    expect(report.total).toBe(3);
     expect(report.filtered.map((entry) => entry.package.name)).toEqual([
       "private",
       "unconfigured",
@@ -194,6 +200,21 @@ describe("discoverPackages", () => {
         .find((entry) => entry.package.name === "private")
         ?.reasons.join(" "),
     ).toContain("private");
+  });
+
+  it("detects scoped and unscoped package names and allows public packages without publishConfig unless required", () => {
+    makeRepo();
+    writeJson("packages/scoped/package.json", { name: "@team/widget", publishConfig: { registry: "https://registry.npmjs.org" } });
+    writeJson("packages/unscoped/package.json", { name: "plain-widget" });
+    writeJson("packages/access/package.json", { name: "@team/access", publishConfig: { access: "public" } });
+    writeJson("packages/private/package.json", { name: "@team/private", private: true, publishConfig: { access: "public" } });
+    const report = discoverPackagesReport(options());
+    expect(report.included.map((pkg) => pkg.name)).toEqual(["@team/access", "@team/widget", "plain-widget"]);
+    expect(report.included.find((pkg) => pkg.name === "plain-widget")).toMatchObject({ scoped: false, publishable: false });
+    expect(report.included.find((pkg) => pkg.name === "@team/widget")).toMatchObject({ scoped: true, scope: "@team", publishable: true });
+    expect(report.filtered.find((entry) => entry.package.name === "@team/private")?.package.publishable).toBe(false);
+    const required = discoverPackagesReport(options({ requirePublishConfig: true }));
+    expect(required.filtered.find((entry) => entry.package.name === "plain-widget")?.reasons.join(" ")).toContain("publishConfig");
   });
 
   it("creates a GitHub Actions include matrix", () => {

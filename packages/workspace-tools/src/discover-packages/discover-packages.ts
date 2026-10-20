@@ -38,21 +38,10 @@ function packageFromManifest(
     private: manifest.private === true,
     publishable:
       manifest.private !== true &&
-      typeof manifest.publishConfig?.registry === "string",
+      manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string",
   };
-}
-
-function matchesFilters(
-  pkg: DiscoveredPackage,
-  options: DiscoverPackagesOptions,
-): boolean {
-  if (!options.includePrivate && pkg.private) return false;
-  if (options.requirePublishConfig && !pkg.publishable) return false;
-  if (options.requireTestScript && !pkg.hasTest) return false;
-  if (options.requireBuildScript && !pkg.hasBuild) return false;
-  return true;
 }
 
 function discoverWorkspacePackages(
@@ -94,7 +83,7 @@ function discoverWorkspacePackages(
         path.posix.basename(directory),
       );
     })
-    .filter((pkg) => matchesFilters(pkg, options));
+;
 }
 
 function discoverDirectoryPackages(
@@ -120,9 +109,7 @@ function discoverDirectoryPackages(
       entry.name,
     );
 
-    if (matchesFilters(pkg, options)) {
-      packages.push(pkg);
-    }
+    packages.push(pkg);
   }
 
   return packages;
@@ -137,12 +124,12 @@ function discoverRootPackage(
   if (typeof manifest.name !== "string") return null;
 
   const pkg = packageFromManifest(".", manifest, manifest.name);
-  return matchesFilters(pkg, options) ? pkg : null;
+  return pkg;
 }
 
-export function discoverPackages(
+export function discoverPackagesReport(
   options: DiscoverPackagesOptions,
-): DiscoveredPackage[] {
+) {
   const packages = options.useWorkspaces
     ? discoverWorkspacePackages(options)
     : discoverDirectoryPackages(options);
@@ -150,7 +137,24 @@ export function discoverPackages(
   const root = discoverRootPackage(options);
   if (root) packages.unshift(root);
 
-  return packages.sort((a, b) => a.name.localeCompare(b.name));
+  const included: DiscoveredPackage[] = [];
+  const filtered: { package: DiscoveredPackage; reasons: string[] }[] = [];
+  for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
+    const reasons: string[] = [];
+    if (pkg.private && !options.includePrivate) reasons.push("Private package: set private to false to publish.");
+    if (options.requirePublishConfig && !pkg.publishable) reasons.push(
+      pkg.private ? "Private packages cannot be published." : 'Add "publishConfig": {"access":"public"} to package.json; registry is optional.',
+    );
+    if (options.requireTestScript && !pkg.hasTest) reasons.push("Add scripts.test to package.json.");
+    if (options.requireBuildScript && !pkg.hasBuild) reasons.push("Add scripts.build to package.json.");
+    if (reasons.length) filtered.push({ package: pkg, reasons });
+    else included.push(pkg);
+  }
+  return { included, filtered };
+}
+
+export function discoverPackages(options: DiscoverPackagesOptions): DiscoveredPackage[] {
+  return discoverPackagesReport(options).included;
 }
 
 export function packageMatrix(packages: DiscoveredPackage[]) {

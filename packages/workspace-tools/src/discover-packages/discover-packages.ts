@@ -38,7 +38,9 @@ function packageFromManifest(
     private: manifest.private === true,
     publishable:
       manifest.private !== true &&
-      manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
+      manifest.publishConfig !== null &&
+      typeof manifest.publishConfig === "object" &&
+      !Array.isArray(manifest.publishConfig),
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string",
   };
@@ -74,16 +76,14 @@ function discoverWorkspacePackages(
     }
   }
 
-  return [...files]
-    .map((file) => {
-      const directory = path.posix.dirname(file);
-      return packageFromManifest(
-        directory,
-        readManifest(file),
-        path.posix.basename(directory),
-      );
-    })
-;
+  return [...files].map((file) => {
+    const directory = path.posix.dirname(file);
+    return packageFromManifest(
+      directory,
+      readManifest(file),
+      path.posix.basename(directory),
+    );
+  });
 }
 
 function discoverDirectoryPackages(
@@ -127,9 +127,7 @@ function discoverRootPackage(
   return pkg;
 }
 
-export function discoverPackagesReport(
-  options: DiscoverPackagesOptions,
-) {
+export function discoverPackagesReport(options: DiscoverPackagesOptions) {
   const packages = options.useWorkspaces
     ? discoverWorkspacePackages(options)
     : discoverDirectoryPackages(options);
@@ -141,19 +139,27 @@ export function discoverPackagesReport(
   const filtered: { package: DiscoveredPackage; reasons: string[] }[] = [];
   for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
     const reasons: string[] = [];
-    if (pkg.private && !options.includePrivate) reasons.push("Private package: set private to false to publish.");
-    if (options.requirePublishConfig && !pkg.publishable) reasons.push(
-      pkg.private ? "Private packages cannot be published." : 'Add "publishConfig": {"access":"public"} to package.json; registry is optional.',
-    );
-    if (options.requireTestScript && !pkg.hasTest) reasons.push("Add scripts.test to package.json.");
-    if (options.requireBuildScript && !pkg.hasBuild) reasons.push("Add scripts.build to package.json.");
+    if (pkg.private && !options.includePrivate)
+      reasons.push("Private package: set private to false to publish.");
+    if (options.requirePublishConfig && !pkg.publishable)
+      reasons.push(
+        pkg.private
+          ? "Private packages cannot be published."
+          : 'Add "publishConfig": {"access":"public"} to package.json; registry is optional.',
+      );
+    if (options.requireTestScript && !pkg.hasTest)
+      reasons.push("Add scripts.test to package.json.");
+    if (options.requireBuildScript && !pkg.hasBuild)
+      reasons.push("Add scripts.build to package.json.");
     if (reasons.length) filtered.push({ package: pkg, reasons });
     else included.push(pkg);
   }
   return { included, filtered };
 }
 
-export function discoverPackages(options: DiscoverPackagesOptions): DiscoveredPackage[] {
+export function discoverPackages(
+  options: DiscoverPackagesOptions,
+): DiscoveredPackage[] {
   return discoverPackagesReport(options).included;
 }
 

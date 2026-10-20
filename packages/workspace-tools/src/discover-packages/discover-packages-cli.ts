@@ -21,7 +21,10 @@ program
   )
   .option("--json", "Print compact JSON")
   .option("--report", "Return included and filtered packages as JSON")
-  .option("--github-summary", "Report publishability in GitHub Actions summary and annotations")
+  .option(
+    "--github-summary",
+    "Report publishability in GitHub Actions summary and annotations",
+  )
   .option("--pretty-json", "Print formatted JSON")
   .action((options) => {
     const directory = options.directory;
@@ -38,17 +41,52 @@ program
     const packages = report.included;
     if (options.githubSummary) {
       const rows = [
-        "# Package discovery and publishability", "",
-        "Included: " + report.included.length + " · Filtered: " + report.filtered.length, "",
+        "# Package discovery and publishability",
+        "",
+        "Included: " +
+          report.included.length +
+          " · Filtered: " +
+          report.filtered.length,
+        "",
         "| Package | Manifest | Status | Required changes |",
         "| --- | --- | --- | --- |",
-        ...report.included.map((pkg) => "| " + pkg.name + " | \`" + pkg.directory + "/package.json\` | Included | — |"),
-        ...report.filtered.map(({ package: pkg, reasons }) => "| " + pkg.name + " | \`" + pkg.directory + "/package.json\` | Filtered | " + reasons.join(" ").replaceAll("|", "\\|") + " |"),
+        ...report.included.map(
+          (pkg) =>
+            "| " +
+            pkg.name +
+            " | \`" +
+            pkg.directory +
+            "/package.json\` | Included | — |",
+        ),
+        ...report.filtered.map(
+          ({ package: pkg, reasons }) =>
+            "| " +
+            pkg.name +
+            " | \`" +
+            pkg.directory +
+            "/package.json\` | Filtered | " +
+            reasons.join(" ").replaceAll("|", "\\|") +
+            " |",
+        ),
       ];
-      if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, rows.join("\\n") + "\\n");
+      if (process.env.GITHUB_STEP_SUMMARY)
+        appendFileSync(
+          process.env.GITHUB_STEP_SUMMARY,
+          rows.join("\\n") + "\\n",
+        );
       for (const { package: pkg, reasons } of report.filtered) {
-        const encode = (text: string) => text.replaceAll("%", "%25").replaceAll("\\r", "%0D").replaceAll("\\n", "%0A");
-        process.stderr.write("::warning file=" + encode(pkg.directory + "/package.json") + ",title=Package filtered::" + encode(pkg.name + ": " + reasons.join(" ")) + "\\n");
+        const encode = (text: string) =>
+          text
+            .replaceAll("%", "%25")
+            .replaceAll("\\r", "%0D")
+            .replaceAll("\\n", "%0A");
+        process.stderr.write(
+          "::warning file=" +
+            encode(pkg.directory + "/package.json") +
+            ",title=Package filtered::" +
+            encode(pkg.name + ": " + reasons.join(" ")) +
+            "\\n",
+        );
       }
     }
     const format = options.json
@@ -57,9 +95,12 @@ program
         ? "pretty-json"
         : (options.format ?? (process.stdout.isTTY ? "text" : "json"));
 
-    if (format === "json") process.stdout.write(JSON.stringify(options.report ? report : packages));
+    if (format === "json")
+      process.stdout.write(JSON.stringify(options.report ? report : packages));
     else if (format === "pretty-json")
-      process.stdout.write(`${JSON.stringify(options.report ? report : packages, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify(options.report ? report : packages, null, 2)}\n`,
+      );
     else if (!packages.length) process.stdout.write("No packages found.\n");
     else {
       process.stdout.write(`Packages (${packages.length}):\n\n`);

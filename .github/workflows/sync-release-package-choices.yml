@@ -2,6 +2,15 @@ name: Sync release package choices
 
 on:
   workflow_dispatch:
+    inputs:
+      workspace-tools-source:
+        description: Workspace Tools CLI source for package discovery
+        type: choice
+        required: true
+        default: checkout:current
+        options:
+          - checkout:current
+          - checkout:upstream;branch:main
   push:
     branches: [main]
     paths:
@@ -24,6 +33,7 @@ jobs:
     with:
       workflow-files: '[".github/workflows/release-draft.yml",".github/workflows/release.yml",".github/workflows/restore-release.yml",".github/workflows/reset-release.yml",".github/workflows/publish.yml"]'
       packages-directory: packages
+      workspace-tools-source: ${{ github.event_name == 'workflow_dispatch' && inputs.workspace-tools-source || 'checkout:current' }}
       use-workspaces: true
       require-publish-config: true
     secrets:

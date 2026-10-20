@@ -6,6 +6,14 @@ run-name: >-
 on:
   workflow_dispatch:
     inputs:
+      workspace-tools-source:
+        description: Workspace Tools CLI source for package discovery
+        type: choice
+        required: true
+        default: checkout:current
+        options:
+          - checkout:current
+          - checkout:upstream;branch:main
       package:
         description: Select a publishable workspace package
         required: true
@@ -67,6 +75,7 @@ jobs:
     uses: moyarich/reusable-workflows/.github/workflows/reusable_bulk-restore-release.yml@main
     with:
       package: ${{ inputs.package }}
+      workspace-tools-source: ${{ inputs.workspace-tools-source }}
       target-branch: ${{ inputs.target-branch }}
       match-mode: ${{ inputs.match-mode }}
       exact-tag: ${{ inputs.exact-tag }}

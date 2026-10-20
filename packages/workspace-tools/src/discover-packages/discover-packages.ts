@@ -17,7 +17,13 @@ export type DiscoveredPackage = {
   name: string;
   version: string;
   private: boolean;
-  publishable?: boolean;
+  scoped: boolean;
+  scope?: string;
+  /** Static npm eligibility; registry credentials and permissions are not checked. */
+  publishable: boolean;
+  hasPublishConfig: boolean;
+  access?: "public" | "restricted";
+  guidance: string[];
   hasTest?: boolean;
   hasBuild?: boolean;
 };
@@ -36,23 +42,31 @@ function packageFromManifest(
     name: manifest.name ?? fallbackName,
     version: manifest.version ?? "0.0.0",
     private: manifest.private === true,
-    publishable:
-      manifest.private !== true &&
-      typeof manifest.publishConfig?.registry === "string",
+    scoped: /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName),
+    ...(/^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName)
+      ? { scope: String(manifest.name ?? fallbackName).split("/")[0] }
+      : {}),
+    publishable: manifest.private !== true,
+    hasPublishConfig:
+      manifest.publishConfig !== null &&
+      typeof manifest.publishConfig === "object" &&
+      !Array.isArray(manifest.publishConfig),
+    ...(manifest.publishConfig?.access === "public" ||
+    manifest.publishConfig?.access === "restricted"
+      ? { access: manifest.publishConfig.access }
+      : {}),
+    guidance:
+      manifest.private === true
+        ? ["Remove private: true to allow npm publish."]
+        : /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) &&
+            manifest.publishConfig?.access !== "public"
+          ? [
+              "For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately.",
+            ]
+          : [],
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string",
   };
-}
-
-function matchesFilters(
-  pkg: DiscoveredPackage,
-  options: DiscoverPackagesOptions,
-): boolean {
-  if (!options.includePrivate && pkg.private) return false;
-  if (options.requirePublishConfig && !pkg.publishable) return false;
-  if (options.requireTestScript && !pkg.hasTest) return false;
-  if (options.requireBuildScript && !pkg.hasBuild) return false;
-  return true;
 }
 
 function discoverWorkspacePackages(
@@ -85,16 +99,14 @@ function discoverWorkspacePackages(
     }
   }
 
-  return [...files]
-    .map((file) => {
-      const directory = path.posix.dirname(file);
-      return packageFromManifest(
-        directory,
-        readManifest(file),
-        path.posix.basename(directory),
-      );
-    })
-    .filter((pkg) => matchesFilters(pkg, options));
+  return [...files].map((file) => {
+    const directory = path.posix.dirname(file);
+    return packageFromManifest(
+      directory,
+      readManifest(file),
+      path.posix.basename(directory),
+    );
+  });
 }
 
 function discoverDirectoryPackages(
@@ -120,9 +132,7 @@ function discoverDirectoryPackages(
       entry.name,
     );
 
-    if (matchesFilters(pkg, options)) {
-      packages.push(pkg);
-    }
+    packages.push(pkg);
   }
 
   return packages;
@@ -137,12 +147,10 @@ function discoverRootPackage(
   if (typeof manifest.name !== "string") return null;
 
   const pkg = packageFromManifest(".", manifest, manifest.name);
-  return matchesFilters(pkg, options) ? pkg : null;
+  return pkg;
 }
 
-export function discoverPackages(
-  options: DiscoverPackagesOptions,
-): DiscoveredPackage[] {
+export function discoverPackagesReport(options: DiscoverPackagesOptions) {
   const packages = options.useWorkspaces
     ? discoverWorkspacePackages(options)
     : discoverDirectoryPackages(options);
@@ -150,7 +158,32 @@ export function discoverPackages(
   const root = discoverRootPackage(options);
   if (root) packages.unshift(root);
 
-  return packages.sort((a, b) => a.name.localeCompare(b.name));
+  const included: DiscoveredPackage[] = [];
+  const filtered: { package: DiscoveredPackage; reasons: string[] }[] = [];
+  for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
+    const reasons: string[] = [];
+    if (pkg.private && !options.includePrivate)
+      reasons.push(
+        "npm cannot publish packages with private: true; remove this field or set it to false.",
+      );
+    if (options.requirePublishConfig && !pkg.hasPublishConfig)
+      reasons.push(
+        "The --require-publish-config filter requires publishConfig; npm does not require it for publishing.",
+      );
+    if (options.requireTestScript && !pkg.hasTest)
+      reasons.push("Add scripts.test to package.json.");
+    if (options.requireBuildScript && !pkg.hasBuild)
+      reasons.push("Add scripts.build to package.json.");
+    if (reasons.length) filtered.push({ package: pkg, reasons });
+    else included.push(pkg);
+  }
+  return { included, filtered, total: included.length + filtered.length };
+}
+
+export function discoverPackages(
+  options: DiscoverPackagesOptions,
+): DiscoveredPackage[] {
+  return discoverPackagesReport(options).included;
 }
 
 export function packageMatrix(packages: DiscoveredPackage[]) {

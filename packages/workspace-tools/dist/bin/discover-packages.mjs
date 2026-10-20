@@ -3358,17 +3358,17 @@ function packageFromManifest(directory, manifest, fallbackName) {
     name: manifest.name ?? fallbackName,
     version: manifest.version ?? "0.0.0",
     private: manifest.private === true,
-    publishable: manifest.private !== true && typeof manifest.publishConfig?.registry === "string",
+    scoped: /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName),
+    .../^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) ? { scope: String(manifest.name ?? fallbackName).split("/")[0] } : {},
+    publishable: manifest.private !== true,
+    hasPublishConfig: manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
+    ...manifest.publishConfig?.access === "public" || manifest.publishConfig?.access === "restricted" ? { access: manifest.publishConfig.access } : {},
+    guidance: manifest.private === true ? ["Remove private: true to allow npm publish."] : /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) && manifest.publishConfig?.access !== "public" ? [
+      "For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately."
+    ] : [],
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string"
   };
-}
-function matchesFilters(pkg, options) {
-  if (!options.includePrivate && pkg.private) return false;
-  if (options.requirePublishConfig && !pkg.publishable) return false;
-  if (options.requireTestScript && !pkg.hasTest) return false;
-  if (options.requireBuildScript && !pkg.hasBuild) return false;
-  return true;
 }
 function discoverWorkspacePackages(options) {
   if (!existsSync("package.json")) return [];
@@ -3393,7 +3393,7 @@ function discoverWorkspacePackages(options) {
       readManifest(file),
       path.posix.basename(directory)
     );
-  }).filter((pkg) => matchesFilters(pkg, options));
+  });
 }
 function discoverDirectoryPackages(options) {
   if (!existsSync(options.packagesDirectory)) return [];
@@ -3410,9 +3410,7 @@ function discoverDirectoryPackages(options) {
       readManifest(manifestPath),
       entry.name
     );
-    if (matchesFilters(pkg, options)) {
-      packages.push(pkg);
-    }
+    packages.push(pkg);
   }
   return packages;
 }
@@ -3421,13 +3419,32 @@ function discoverRootPackage(options) {
   const manifest = readManifest("package.json");
   if (typeof manifest.name !== "string") return null;
   const pkg = packageFromManifest(".", manifest, manifest.name);
-  return matchesFilters(pkg, options) ? pkg : null;
+  return pkg;
 }
-function discoverPackages(options) {
-  const packages = options.useWorkspaces ? discoverWorkspacePackages(options) : discoverDirectoryPackages(options);
+function discoverPackagesReport(options) {
+  const packages = options.useWorkspaces ? discoverWorkspacePackages() : discoverDirectoryPackages(options);
   const root = discoverRootPackage(options);
   if (root) packages.unshift(root);
-  return packages.sort((a, b) => a.name.localeCompare(b.name));
+  const included = [];
+  const filtered = [];
+  for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
+    const reasons = [];
+    if (pkg.private && !options.includePrivate)
+      reasons.push(
+        "npm cannot publish packages with private: true; remove this field or set it to false."
+      );
+    if (options.requirePublishConfig && !pkg.hasPublishConfig)
+      reasons.push(
+        "The --require-publish-config filter requires publishConfig; npm does not require it for publishing."
+      );
+    if (options.requireTestScript && !pkg.hasTest)
+      reasons.push("Add scripts.test to package.json.");
+    if (options.requireBuildScript && !pkg.hasBuild)
+      reasons.push("Add scripts.build to package.json.");
+    if (reasons.length) filtered.push({ package: pkg, reasons });
+    else included.push(pkg);
+  }
+  return { included, filtered, total: included.length + filtered.length };
 }
 program.name("discover-packages").description("Discover repository packages and package metadata.").option("--directory <directory>", "Packages directory", "packages").option("--workspaces", "Discover from package.json workspace patterns").option("--include-root-package", "Include the repository root package").option("--include-private", "Include private packages").option("--require-publish-config", "Only include publishable packages").option("--require-test-script", "Only include packages with a test script").option("--require-build-script", "Only include packages with a build script").addOption(
   new Option("--format <format>", "Output format").choices([
@@ -3437,7 +3454,7 @@ program.name("discover-packages").description("Discover repository packages and 
   ])
 ).option("--json", "Print compact JSON").option("--pretty-json", "Print formatted JSON").action((options) => {
   const directory = options.directory;
-  const packages = discoverPackages({
+  const report = discoverPackagesReport({
     packagesDirectory: directory,
     useWorkspaces: Boolean(options.workspaces),
     includeRootPackage: Boolean(options.includeRootPackage),
@@ -3446,10 +3463,11 @@ program.name("discover-packages").description("Discover repository packages and 
     requireTestScript: Boolean(options.requireTestScript),
     requireBuildScript: Boolean(options.requireBuildScript)
   });
+  const packages = report.included;
   const format = options.json ? "json" : options.prettyJson ? "pretty-json" : options.format ?? (process.stdout.isTTY ? "text" : "json");
-  if (format === "json") process.stdout.write(JSON.stringify(packages));
+  if (format === "json") process.stdout.write(JSON.stringify(report));
   else if (format === "pretty-json")
-    process.stdout.write(`${JSON.stringify(packages, null, 2)}
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
 `);
   else if (!packages.length) process.stdout.write("No packages found.\n");
   else {

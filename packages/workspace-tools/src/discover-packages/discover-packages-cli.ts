@@ -1,5 +1,5 @@
 import { Option, program } from "commander";
-import { discoverPackages } from "./discover-packages";
+import { discoverPackagesReport } from "./discover-packages";
 
 program
   .name("discover-packages")
@@ -22,7 +22,7 @@ program
   .option("--pretty-json", "Print formatted JSON")
   .action((options) => {
     const directory = options.directory;
-    const packages = discoverPackages({
+    const report = discoverPackagesReport({
       packagesDirectory: directory,
       useWorkspaces: Boolean(options.workspaces),
       includeRootPackage: Boolean(options.includeRootPackage),
@@ -32,15 +32,16 @@ program
       requireBuildScript: Boolean(options.requireBuildScript),
     });
 
+    const packages = report.included;
     const format = options.json
       ? "json"
       : options.prettyJson
         ? "pretty-json"
         : (options.format ?? (process.stdout.isTTY ? "text" : "json"));
 
-    if (format === "json") process.stdout.write(JSON.stringify(packages));
+    if (format === "json") process.stdout.write(JSON.stringify(report));
     else if (format === "pretty-json")
-      process.stdout.write(`${JSON.stringify(packages, null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     else if (!packages.length) process.stdout.write("No packages found.\n");
     else {
       process.stdout.write(`Packages (${packages.length}):\n\n`);

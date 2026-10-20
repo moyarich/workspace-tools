@@ -70,10 +70,7 @@ program
         ),
       ];
       if (process.env.GITHUB_STEP_SUMMARY)
-        appendFileSync(
-          process.env.GITHUB_STEP_SUMMARY,
-          rows.join("\n") + "\n",
-        );
+        appendFileSync(process.env.GITHUB_STEP_SUMMARY, rows.join("\n") + "\n");
       for (const { package: pkg, reasons } of report.filtered) {
         const encode = (text: string) =>
           text

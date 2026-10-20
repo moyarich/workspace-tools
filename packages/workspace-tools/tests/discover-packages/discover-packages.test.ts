@@ -159,18 +159,41 @@ describe("discoverPackages", () => {
 
   it("accepts access-only publishConfig and explains excluded workspaces", () => {
     makeRepo();
-    writeJson("package.json", { name: "root", private: true, workspaces: ["packages/*"] });
+    writeJson("package.json", {
+      name: "root",
+      private: true,
+      workspaces: ["packages/*"],
+    });
     writeJson("packages/css-expand-collapse/package.json", {
-      name: "@moyarich/css-expand-collapse", publishConfig: { access: "public" },
+      name: "@moyarich/css-expand-collapse",
+      publishConfig: { access: "public" },
     });
     writeJson("packages/unconfigured/package.json", { name: "unconfigured" });
-    writeJson("packages/private/package.json", { name: "private", private: true });
+    writeJson("packages/private/package.json", {
+      name: "private",
+      private: true,
+    });
     execFileSync("git", ["add", "."]);
-    const report = discoverPackagesReport(options({ useWorkspaces: true, requirePublishConfig: true }));
-    expect(report.included.map((pkg) => pkg.name)).toEqual(["@moyarich/css-expand-collapse"]);
-    expect(report.filtered.map((entry) => entry.package.name)).toEqual(["private", "unconfigured"]);
-    expect(report.filtered.find((entry) => entry.package.name === "unconfigured")?.reasons.join(" ")).toContain("publishConfig");
-    expect(report.filtered.find((entry) => entry.package.name === "private")?.reasons.join(" ")).toContain("private");
+    const report = discoverPackagesReport(
+      options({ useWorkspaces: true, requirePublishConfig: true }),
+    );
+    expect(report.included.map((pkg) => pkg.name)).toEqual([
+      "@moyarich/css-expand-collapse",
+    ]);
+    expect(report.filtered.map((entry) => entry.package.name)).toEqual([
+      "private",
+      "unconfigured",
+    ]);
+    expect(
+      report.filtered
+        .find((entry) => entry.package.name === "unconfigured")
+        ?.reasons.join(" "),
+    ).toContain("publishConfig");
+    expect(
+      report.filtered
+        .find((entry) => entry.package.name === "private")
+        ?.reasons.join(" "),
+    ).toContain("private");
   });
 
   it("creates a GitHub Actions include matrix", () => {

@@ -21,7 +21,6 @@ on:
       - .github/workflows/release.yml
       - .github/workflows/release-draft.yml
       - .github/workflows/publish.yml
-      - .github/workflows/publish-vscode-vsx.yml
       - .github/workflows/restore-release.yml
       - .github/workflows/reset-release.yml
       - .github/workflows/sync-release-package-choices.yml

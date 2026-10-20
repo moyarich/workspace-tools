@@ -24,6 +24,7 @@ jobs:
     with:
       workflow-files: '[".github/workflows/release-draft.yml",".github/workflows/release.yml",".github/workflows/restore-release.yml",".github/workflows/reset-release.yml",".github/workflows/publish.yml"]'
       packages-directory: packages
+      workspace-tools-source: checkout:current
       use-workspaces: true
       require-publish-config: true
     secrets:

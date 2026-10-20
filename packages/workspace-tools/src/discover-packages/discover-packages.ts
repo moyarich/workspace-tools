@@ -20,6 +20,9 @@ export type DiscoveredPackage = {
   scoped: boolean;
   scope?: string;
   publishable?: boolean;
+  hasPublishConfig?: boolean;
+  access?: "public" | "restricted";
+  guidance?: string[];
   hasTest?: boolean;
   hasBuild?: boolean;
 };
@@ -42,11 +45,14 @@ function packageFromManifest(
     ...(/^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName)
       ? { scope: String(manifest.name ?? fallbackName).split("/")[0] }
       : {}),
-    publishable:
-      manifest.private !== true &&
-      manifest.publishConfig !== null &&
-      typeof manifest.publishConfig === "object" &&
-      !Array.isArray(manifest.publishConfig),
+    publishable: manifest.private !== true,
+    hasPublishConfig: manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
+    ...(manifest.publishConfig?.access === "public" || manifest.publishConfig?.access === "restricted" ? { access: manifest.publishConfig.access } : {}),
+    guidance: manifest.private === true
+      ? ["Remove private: true to allow npm publish."]
+      : /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) && manifest.publishConfig?.access !== "public"
+        ? ["For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately."]
+        : [],
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string",
   };
@@ -147,7 +153,7 @@ export function discoverPackagesReport(options: DiscoverPackagesOptions) {
     const reasons: string[] = [];
     if (pkg.private && !options.includePrivate)
       reasons.push("Private package: set private to false to publish.");
-    if (options.requirePublishConfig && !pkg.publishable && !pkg.private)
+    if (options.requirePublishConfig && !pkg.hasPublishConfig && !pkg.private)
       reasons.push(
         pkg.private
           ? "Private packages cannot be published."

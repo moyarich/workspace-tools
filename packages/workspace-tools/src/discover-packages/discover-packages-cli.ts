@@ -39,12 +39,9 @@ program
         ? "pretty-json"
         : (options.format ?? (process.stdout.isTTY ? "text" : "json"));
 
-    if (format === "json")
-      process.stdout.write(JSON.stringify(report));
+    if (format === "json") process.stdout.write(JSON.stringify(report));
     else if (format === "pretty-json")
-      process.stdout.write(
-        `${JSON.stringify(report, null, 2)}\n`,
-      );
+      process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     else if (!packages.length) process.stdout.write("No packages found.\n");
     else {
       process.stdout.write(`Packages (${packages.length}):\n\n`);

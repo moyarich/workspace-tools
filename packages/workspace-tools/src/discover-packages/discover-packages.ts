@@ -39,7 +39,9 @@ function packageFromManifest(
     version: manifest.version ?? "0.0.0",
     private: manifest.private === true,
     scoped: /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName),
-    ...(/^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) ? { scope: String(manifest.name ?? fallbackName).split('/')[0] } : {}),
+    ...(/^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName)
+      ? { scope: String(manifest.name ?? fallbackName).split("/")[0] }
+      : {}),
     publishable:
       manifest.private !== true &&
       manifest.publishConfig !== null &&

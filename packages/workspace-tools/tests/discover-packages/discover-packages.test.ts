@@ -77,6 +77,8 @@ describe("discoverPackages", () => {
         scoped: true,
         scope: "@moya",
         publishable: true,
+        hasPublishConfig: true,
+        guidance: ["For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately."],
         hasTest: true,
         hasBuild: true,
       },
@@ -127,6 +129,7 @@ describe("discoverPackages", () => {
       version: "0.1.0",
       private: false,
       publishable: true,
+      hasPublishConfig: true,
       scoped: true,
       scope: "@moyarich",
     });
@@ -190,6 +193,7 @@ describe("discoverPackages", () => {
       publishable: true,
     });
     expect(report.total).toBe(3);
+    expect(report.included[0].guidance).toEqual([]);
     expect(report.filtered.map((entry) => entry.package.name)).toEqual([
       "private",
       "unconfigured",
@@ -230,7 +234,7 @@ describe("discoverPackages", () => {
     ]);
     expect(
       report.included.find((pkg) => pkg.name === "plain-widget"),
-    ).toMatchObject({ scoped: false, publishable: false });
+    ).toMatchObject({ scoped: false, publishable: true, hasPublishConfig: false });
     expect(
       report.included.find((pkg) => pkg.name === "@team/widget"),
     ).toMatchObject({ scoped: true, scope: "@team", publishable: true });

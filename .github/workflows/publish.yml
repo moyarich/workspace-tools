@@ -1,7 +1,9 @@
 name: Publish npm package
 
 run-name: >-
-  Publish · ${{ inputs.package }} · ${{ inputs.registry }} · ${{ inputs.version-mode }}${{ inputs.version-mode == 'exact' && format(':{0}', inputs.exact-version) || '' }} · dry-run=${{ inputs.dry-run }}
+  Publish · ${{ inputs.package }} · ${{ inputs.registry }} · ${{ inputs.version-mode
+  }}${{ inputs.version-mode == 'exact' && format(':{0}', inputs.exact-version) ||
+  '' }} · dry-run=${{ inputs.dry-run }}
 
 on:
   workflow_dispatch:
@@ -12,8 +14,10 @@ on:
         required: true
         default: checkout:current
         options:
+          - auto
           - checkout:current
           - checkout:upstream;branch:main
+          - registry:npm:latest
       package:
         description: Select a publishable workspace package
         required: true
@@ -58,7 +62,8 @@ on:
         default: true
         type: boolean
       tag:
-        description: npm distribution tag (leave empty to use the resolved default)
+        description: npm distribution tag (leave empty to use the resolved
+          default)
         required: false
         default: ""
         type: string
@@ -80,8 +85,8 @@ jobs:
       packages: write
     uses: moyarich/reusable-workflows/.github/workflows/reusable_bulk-npm-publish.yml@main
     with:
-      package: ${{ inputs.package }}
       workspace-tools-source: ${{ inputs.workspace-tools-source }}
+      package: ${{ inputs.package }}
       registry: ${{ inputs.registry }}
       version-mode: ${{ inputs.version-mode }}
       exact-version: ${{ inputs.exact-version }}

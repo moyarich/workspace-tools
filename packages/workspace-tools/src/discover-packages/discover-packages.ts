@@ -19,10 +19,11 @@ export type DiscoveredPackage = {
   private: boolean;
   scoped: boolean;
   scope?: string;
-  publishable?: boolean;
-  hasPublishConfig?: boolean;
+  /** Static npm eligibility; registry credentials and permissions are not checked. */
+  publishable: boolean;
+  hasPublishConfig: boolean;
   access?: "public" | "restricted";
-  guidance?: string[];
+  guidance: string[];
   hasTest?: boolean;
   hasBuild?: boolean;
 };
@@ -162,13 +163,9 @@ export function discoverPackagesReport(options: DiscoverPackagesOptions) {
   for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
     const reasons: string[] = [];
     if (pkg.private && !options.includePrivate)
-      reasons.push("Private package: set private to false to publish.");
-    if (options.requirePublishConfig && !pkg.hasPublishConfig && !pkg.private)
-      reasons.push(
-        pkg.private
-          ? "Private packages cannot be published."
-          : 'Add "publishConfig": {"access":"public"} to package.json; registry is optional.',
-      );
+      reasons.push("npm cannot publish packages with private: true; remove this field or set it to false.");
+    if (options.requirePublishConfig && !pkg.hasPublishConfig)
+      reasons.push("The --require-publish-config filter requires publishConfig; npm does not require it for publishing.");
     if (options.requireTestScript && !pkg.hasTest)
       reasons.push("Add scripts.test to package.json.");
     if (options.requireBuildScript && !pkg.hasBuild)

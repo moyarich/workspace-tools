@@ -2,7 +2,7 @@
 import { EventEmitter } from "node:events";
 import childProcess, { execFileSync } from "node:child_process";
 import path from "node:path";
-import fs, { existsSync, readdirSync, readFileSync, appendFileSync } from "node:fs";
+import fs, { existsSync, readdirSync, readFileSync } from "node:fs";
 import process$1 from "node:process";
 import { stripVTControlCharacters } from "node:util";
 class CommanderError extends Error {
@@ -3358,6 +3358,8 @@ function packageFromManifest(directory, manifest, fallbackName) {
     name: manifest.name ?? fallbackName,
     version: manifest.version ?? "0.0.0",
     private: manifest.private === true,
+    scoped: /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName),
+    .../^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) ? { scope: String(manifest.name ?? fallbackName).split("/")[0] } : {},
     publishable: manifest.private !== true && manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string"
@@ -3424,7 +3426,7 @@ function discoverPackagesReport(options) {
     const reasons = [];
     if (pkg.private && !options.includePrivate)
       reasons.push("Private package: set private to false to publish.");
-    if (options.requirePublishConfig && !pkg.publishable)
+    if (options.requirePublishConfig && !pkg.publishable && !pkg.private)
       reasons.push(
         pkg.private ? "Private packages cannot be published." : 'Add "publishConfig": {"access":"public"} to package.json; registry is optional.'
       );
@@ -3435,7 +3437,7 @@ function discoverPackagesReport(options) {
     if (reasons.length) filtered.push({ package: pkg, reasons });
     else included.push(pkg);
   }
-  return { included, filtered };
+  return { included, filtered, total: included.length + filtered.length };
 }
 program.name("discover-packages").description("Discover repository packages and package metadata.").option("--directory <directory>", "Packages directory", "packages").option("--workspaces", "Discover from package.json workspace patterns").option("--include-root-package", "Include the repository root package").option("--include-private", "Include private packages").option("--require-publish-config", "Only include publishable packages").option("--require-test-script", "Only include packages with a test script").option("--require-build-script", "Only include packages with a build script").addOption(
   new Option("--format <format>", "Output format").choices([
@@ -3443,10 +3445,7 @@ program.name("discover-packages").description("Discover repository packages and 
     "json",
     "pretty-json"
   ])
-).option("--json", "Print compact JSON").option("--report", "Return included and filtered packages as JSON").option(
-  "--github-summary",
-  "Report publishability in GitHub Actions summary and annotations"
-).option("--pretty-json", "Print formatted JSON").action((options) => {
+).option("--json", "Print compact JSON").option("--pretty-json", "Print formatted JSON").action((options) => {
   const directory = options.directory;
   const report = discoverPackagesReport({
     packagesDirectory: directory,
@@ -3458,38 +3457,11 @@ program.name("discover-packages").description("Discover repository packages and 
     requireBuildScript: Boolean(options.requireBuildScript)
   });
   const packages = report.included;
-  if (options.githubSummary) {
-    const rows = [
-      "# Package discovery and publishability",
-      "",
-      "Included: " + report.included.length + " · Filtered: " + report.filtered.length,
-      "",
-      "| Package | Manifest | Status | Required changes |",
-      "| --- | --- | --- | --- |",
-      ...report.included.map(
-        (pkg) => "| " + pkg.name + " | `" + pkg.directory + "/package.json` | Included | — |"
-      ),
-      ...report.filtered.map(
-        ({ package: pkg, reasons }) => "| " + pkg.name + " | `" + pkg.directory + "/package.json` | Filtered | " + reasons.join(" ").replaceAll("|", "\\|") + " |"
-      )
-    ];
-    if (process.env.GITHUB_STEP_SUMMARY)
-      appendFileSync(process.env.GITHUB_STEP_SUMMARY, rows.join("\n") + "\n");
-    for (const { package: pkg, reasons } of report.filtered) {
-      const encode = (text) => text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
-      process.stderr.write(
-        "::warning file=" + encode(pkg.directory + "/package.json") + ",title=Package filtered::" + encode(pkg.name + ": " + reasons.join(" ")) + "\n"
-      );
-    }
-  }
   const format = options.json ? "json" : options.prettyJson ? "pretty-json" : options.format ?? (process.stdout.isTTY ? "text" : "json");
-  if (format === "json")
-    process.stdout.write(JSON.stringify(options.report ? report : packages));
+  if (format === "json") process.stdout.write(JSON.stringify(report));
   else if (format === "pretty-json")
-    process.stdout.write(
-      `${JSON.stringify(options.report ? report : packages, null, 2)}
-`
-    );
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
   else if (!packages.length) process.stdout.write("No packages found.\n");
   else {
     process.stdout.write(`Packages (${packages.length}):

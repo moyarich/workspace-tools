@@ -3360,7 +3360,12 @@ function packageFromManifest(directory, manifest, fallbackName) {
     private: manifest.private === true,
     scoped: /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName),
     .../^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) ? { scope: String(manifest.name ?? fallbackName).split("/")[0] } : {},
-    publishable: manifest.private !== true && manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
+    publishable: manifest.private !== true,
+    hasPublishConfig: manifest.publishConfig !== null && typeof manifest.publishConfig === "object" && !Array.isArray(manifest.publishConfig),
+    ...manifest.publishConfig?.access === "public" || manifest.publishConfig?.access === "restricted" ? { access: manifest.publishConfig.access } : {},
+    guidance: manifest.private === true ? ["Remove private: true to allow npm publish."] : /^@[^/]+\/[^/]+$/.test(manifest.name ?? fallbackName) && manifest.publishConfig?.access !== "public" ? [
+      "For a public scoped package, set publishConfig.access to public or run npm publish --access public; npm scope access and registry permissions must be verified separately."
+    ] : [],
     hasTest: typeof manifest.scripts?.test === "string",
     hasBuild: typeof manifest.scripts?.build === "string"
   };
@@ -3425,11 +3430,9 @@ function discoverPackagesReport(options) {
   for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
     const reasons = [];
     if (pkg.private && !options.includePrivate)
-      reasons.push("Private package: set private to false to publish.");
-    if (options.requirePublishConfig && !pkg.publishable && !pkg.private)
-      reasons.push(
-        pkg.private ? "Private packages cannot be published." : 'Add "publishConfig": {"access":"public"} to package.json; registry is optional.'
-      );
+      reasons.push("npm cannot publish packages with private: true; remove this field or set it to false.");
+    if (options.requirePublishConfig && !pkg.hasPublishConfig)
+      reasons.push("The --require-publish-config filter requires publishConfig; npm does not require it for publishing.");
     if (options.requireTestScript && !pkg.hasTest)
       reasons.push("Add scripts.test to package.json.");
     if (options.requireBuildScript && !pkg.hasBuild)

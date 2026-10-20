@@ -1,19 +1,12 @@
 name: Restore Release
 
 run-name: >-
-  Restore release · ${{ inputs.package }} · ${{ inputs.restore-source }} · dry-run=${{ inputs.dry-run }}
+  Restore release · ${{ inputs.package }} · ${{ inputs.restore-source }} · dry-run=${{
+  inputs.dry-run }}
 
 on:
   workflow_dispatch:
     inputs:
-      workspace-tools-source:
-        description: Workspace Tools CLI source for package discovery
-        type: choice
-        required: true
-        default: checkout:current
-        options:
-          - checkout:current
-          - checkout:upstream;branch:main
       package:
         description: Select a publishable workspace package
         required: true
@@ -28,7 +21,9 @@ on:
         default: main
         type: string
       restore-source:
-        description: "Historical source: commit:<sha>, tag:<tag>, run:<id>, artifact:<id>, or github-url:<supported GitHub URL>"
+        description:
+          "Historical source: commit:<sha>, tag:<tag>, run:<id>, artifact:<id>,
+          or github-url:<supported GitHub URL>"
         required: true
         type: string
       match-mode:
@@ -45,7 +40,8 @@ on:
         default: ""
         type: string
       skip-finalized:
-        description: Skip finalized releases without modifying them (for bulk live recovery)
+        description: Skip finalized releases without modifying them (for bulk
+          live recovery)
         required: true
         default: false
         type: boolean
@@ -75,7 +71,6 @@ jobs:
     uses: moyarich/reusable-workflows/.github/workflows/reusable_bulk-restore-release.yml@main
     with:
       package: ${{ inputs.package }}
-      workspace-tools-source: ${{ inputs.workspace-tools-source }}
       target-branch: ${{ inputs.target-branch }}
       match-mode: ${{ inputs.match-mode }}
       exact-tag: ${{ inputs.exact-tag }}

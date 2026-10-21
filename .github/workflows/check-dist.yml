@@ -37,9 +37,9 @@ on:
         type: string
         default: npm
       include-root-package:
-        description: Include buildable root package in discovery
+        description: Include the root package only when it has an explicitly configured distribution target
         type: boolean
-        default: true
+        default: false
       workspace-tools-source:
         description: Workspace Tools CLI source for discovery
         type: choice

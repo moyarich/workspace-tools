@@ -104,7 +104,7 @@ if (mode === "snapshot") {
       }
     }
   }
-  const failed = ["upgrade", "install", "commit"].filter(
+  const failed = ["selection", "upgrade", "install", "commit"].filter(
     (x) => process.env[`RESULT_${x.toUpperCase()}`] === "failure",
   );
   const runUrl = `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || ""}/actions/runs/${process.env.GITHUB_RUN_ID || ""}`;
@@ -115,9 +115,12 @@ if (mode === "snapshot") {
     "",
     `**Excluded packages:** \`${markdown(process.env.REJECT || "(none)")}\``,
     "",
+    `**Selected package:** \`${markdown(process.env.PACKAGE_SELECTOR || "all")}\``,
+    "",
     "## Stages",
     "| Stage | Result |",
     "| --- | --- |",
+    `| Package selection | ${status(process.env.RESULT_SELECTION)} |`,
     `| Upgrade declarations | ${status(process.env.RESULT_UPGRADE)} |`,
     `| Install and lockfile | ${status(process.env.RESULT_INSTALL)} |`,
     `| Commit and push | ${status(process.env.RESULT_COMMIT)} |`,

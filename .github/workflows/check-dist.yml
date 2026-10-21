@@ -1,17 +1,45 @@
-name: Check distribution
+name: "Check · Bin distribution"
 
 on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - "vite.config.ts"
+      - "package.json"
+      - "package-lock.json"
+
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Preview regenerated distribution without committing
+        type: boolean
+        required: true
+        default: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: check-dist-${{ github.repository }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  check-dist:
-    name: Check distribution
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_check-dist.yml@main
+  distribution:
+    name: Build, compare, validate and heal distribution
+    permissions:
+      contents: write
+    uses: ./.github/workflows/reusable_self-heal-dist.yml
     with:
       dist-path: packages/workspace-tools/dist/bin/
       build-command: npm run build
+      
+      install-command: npm install --no-package-lock --no-audit --no-fund
+      validation-command: npx --no-install vitest run
       node-version: "24"
-      artifact-name: dist
+      node-caching: ""
+      artifact-name: dist-preview
+      repair: true
+      commit: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && !inputs.dry-run) }}
+      checkout-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      expected-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      target-branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}

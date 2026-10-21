@@ -36,7 +36,7 @@ jobs:
 
     with:
       workspace-tools-source: ${{ inputs.workspace-tools-source || 'checkout:current' }}
-      workflow-files: '["check-dist.yml",".github/workflows/release-draft.yml",".github/workflows/release.yml",".github/workflows/restore-release.yml",".github/workflows/reset-release.yml",".github/workflows/publish.yml",".github/workflows/publish-vscode-vsx.yml"]'
+      workflow-files: '[".github/workflows/check-dist.yml",".github/workflows/release-draft.yml",".github/workflows/release.yml",".github/workflows/restore-release.yml",".github/workflows/reset-release.yml",".github/workflows/publish.yml",".github/workflows/publish-vscode-vsx.yml"]'
       packages-directory: packages
       use-workspaces: true
       require-publish-config: false

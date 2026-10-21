@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: Select a buildable workspace package
+        description: Select a publishable workspace package
         type: choice
         required: true
         default: all
@@ -15,11 +15,13 @@ on:
           - all
           - packages/workspace-tools
       dist-path:
-        description: Committed distribution path override (for example actions/dist/); empty derives package dist/
+        description: Committed distribution path override (for example 
+          actions/dist/); empty derives package dist/
         type: string
         default: ""
       build-command:
-        description: Build command override (for example npm run build:cli); empty uses the selected workspace build
+        description: Build command override (for example npm run build:cli); 
+          empty uses the selected workspace build
         type: string
         default: ""
       install-command:
@@ -56,7 +58,8 @@ jobs:
     name: Discover workspace packages
     permissions:
       contents: read
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_discover-packages.yml@main
+    uses: 
+      moyarich/reusable-workflows/.github/workflows/reusable_discover-packages.yml@main
     with:
       packages-directory: packages
       use-workspaces: true
@@ -116,16 +119,20 @@ jobs:
       matrix: ${{ fromJSON(needs.select-packages.outputs.matrix) }}
     permissions:
       contents: write
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_self-heal-dist.yml@main
+    uses: 
+      moyarich/reusable-workflows/.github/workflows/reusable_self-heal-dist.yml@main
     with:
-      dist-path: ${{ inputs.dist-path || format('{0}/dist/', matrix.directory) }}
-      build-command: ${{ inputs.build-command || format('npm run build --workspace {0}', matrix.name) }}
+      dist-path: ${{ inputs.dist-path || format('{0}/dist/', matrix.directory) 
+        }}
+      build-command: ${{ inputs.build-command || format('npm run build 
+        --workspace {0}', matrix.name) }}
       install-command: ${{ inputs.install-command }}
       node-caching: ${{ inputs.node-caching }}
       artifact-name: ${{ format('dist-{0}', strategy.job-index) }}
       node-version: "24"
       repair: true
-      commit: ${{ !inputs.dry-run && needs.select-packages.outputs.single-package == 'true' }}
+      commit: ${{ !inputs.dry-run && 
+        needs.select-packages.outputs.single-package == 'true' }}
       target-branch: ${{ github.ref_name }}
       expected-sha: ${{ github.sha }}
       checkout-sha: ${{ github.sha }}

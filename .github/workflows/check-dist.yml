@@ -118,6 +118,8 @@ jobs:
       build-command: ${{ matrix.buildCommand }}
       install-command: ${{ inputs.install-command }}
       node-caching: ${{ inputs.node-caching }}
+      package-name: ${{ matrix.name }}
+      package-directory: ${{ matrix.directory }}
       artifact-name: ${{ format('dist-{0}', matrix.artifactSuffix) }}
       node-version: "24"
       repair: true

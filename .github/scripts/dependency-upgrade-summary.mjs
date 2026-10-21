@@ -8,30 +8,62 @@ import { readFile, writeFile, appendFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
-const groups = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
-const stateFile = process.env.DEP_UPGRADE_STATE || resolve(process.env.RUNNER_TEMP || ".", "dependency-upgrade-before.json");
+const groups = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+];
+const stateFile =
+  process.env.DEP_UPGRADE_STATE ||
+  resolve(process.env.RUNNER_TEMP || ".", "dependency-upgrade-before.json");
 const mode = process.argv[2];
 
 function manifestFiles() {
-  return execFileSync("git", ["ls-files", "-z", "--", "**/package.json", "package.json"], { encoding: "utf8" })
-    .split("\0").filter(Boolean).sort();
+  return execFileSync(
+    "git",
+    ["ls-files", "-z", "--", "**/package.json", "package.json"],
+    { encoding: "utf8" },
+  )
+    .split("\0")
+    .filter(Boolean)
+    .sort();
 }
 async function loadManifest(path) {
-  try { return JSON.parse(await readFile(path, "utf8")); } catch { return null; }
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch {
+    return null;
+  }
 }
 function markdown(value) {
-  return String(value ?? "—").replaceAll("|", "\\|").replace(/[\r\n]+/g, " ").replaceAll("`", "\\`");
+  return String(value ?? "—")
+    .replaceAll("|", "\\|")
+    .replace(/[\r\n]+/g, " ")
+    .replaceAll("`", "\\`");
 }
 function status(value) {
-  return { success: "✅ Passed", failure: "❌ Failed", skipped: "⏭️ Skipped", cancelled: "⚠️ Cancelled" }[value] || "—";
+  return (
+    {
+      success: "✅ Passed",
+      failure: "❌ Failed",
+      skipped: "⏭️ Skipped",
+      cancelled: "⚠️ Cancelled",
+    }[value] || "—"
+  );
 }
 if (mode === "snapshot") {
   const manifests = {};
-  for (const file of manifestFiles()) manifests[file] = await loadManifest(file);
+  for (const file of manifestFiles())
+    manifests[file] = await loadManifest(file);
   await writeFile(stateFile, JSON.stringify(manifests));
 } else if (mode === "report") {
   let before = {};
-  try { before = JSON.parse(await readFile(stateFile, "utf8")); } catch { /* snapshot could fail */ }
+  try {
+    before = JSON.parse(await readFile(stateFile, "utf8"));
+  } catch {
+    /* snapshot could fail */
+  }
   const changes = [];
   for (const file of new Set([...Object.keys(before), ...manifestFiles()])) {
     const oldPackage = before[file] || {};
@@ -39,14 +71,25 @@ if (mode === "snapshot") {
     for (const type of groups) {
       const previous = oldPackage[type] || {};
       const current = newPackage[type] || {};
-      for (const dependency of new Set([...Object.keys(previous), ...Object.keys(current)])) {
+      for (const dependency of new Set([
+        ...Object.keys(previous),
+        ...Object.keys(current),
+      ])) {
         if (previous[dependency] !== current[dependency]) {
-          changes.push({ file, type, dependency, before: previous[dependency] || "—", after: current[dependency] || "—" });
+          changes.push({
+            file,
+            type,
+            dependency,
+            before: previous[dependency] || "—",
+            after: current[dependency] || "—",
+          });
         }
       }
     }
   }
-  const failed = ["upgrade", "install", "commit"].filter(x => process.env[`RESULT_${x.toUpperCase()}`] === "failure");
+  const failed = ["upgrade", "install", "commit"].filter(
+    (x) => process.env[`RESULT_${x.toUpperCase()}`] === "failure",
+  );
   const runUrl = `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${process.env.GITHUB_REPOSITORY || ""}/actions/runs/${process.env.GITHUB_RUN_ID || ""}`;
   const lines = [
     "# Workspace dependency upgrade",
@@ -70,21 +113,43 @@ if (mode === "snapshot") {
       if (!byFile.has(change.file)) byFile.set(change.file, []);
       byFile.get(change.file).push(change);
     }
-    lines.push(`**${byFile.size} manifest(s), ${changes.length} dependency declaration(s) changed.**`, "");
+    lines.push(
+      `**${byFile.size} manifest(s), ${changes.length} dependency declaration(s) changed.**`,
+      "",
+    );
     for (const [file, items] of byFile) {
-      lines.push(`<details><summary>${markdown(file)} — ${items.length} change(s)</summary>`, "",
-        "| Dependency | Type | Previous | Updated |", "| --- | --- | --- | --- |");
-      for (const item of items) lines.push(`| ${markdown(item.dependency)} | ${markdown(item.type)} | ${markdown(item.before)} | ${markdown(item.after)} |`);
+      lines.push(
+        `<details><summary>${markdown(file)} — ${items.length} change(s)</summary>`,
+        "",
+        "| Dependency | Type | Previous | Updated |",
+        "| --- | --- | --- | --- |",
+      );
+      for (const item of items)
+        lines.push(
+          `| ${markdown(item.dependency)} | ${markdown(item.type)} | ${markdown(item.before)} | ${markdown(item.after)} |`,
+        );
       lines.push("", "</details>", "");
     }
   } else {
-    lines.push("No dependency declaration changes detected. This can mean dependencies are current or the upgrade stopped before changing manifests.", "");
+    lines.push(
+      "No dependency declaration changes detected. This can mean dependencies are current or the upgrade stopped before changing manifests.",
+      "",
+    );
   }
-  lines.push("## Git result", process.env.GIT_RESULT || "No commit or push result was recorded.", "");
-  if (failed.length) lines.push(`**Failed stage(s):** ${failed.join(", ")}. [Inspect workflow logs](${runUrl}).`, "");
+  lines.push(
+    "## Git result",
+    process.env.GIT_RESULT || "No commit or push result was recorded.",
+    "",
+  );
+  if (failed.length)
+    lines.push(
+      `**Failed stage(s):** ${failed.join(", ")}. [Inspect workflow logs](${runUrl}).`,
+      "",
+    );
   lines.push(`[View this workflow run](${runUrl})`, "");
   const summary = lines.join("\n");
-  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
+  if (process.env.GITHUB_STEP_SUMMARY)
+    await appendFile(process.env.GITHUB_STEP_SUMMARY, summary);
   else process.stdout.write(summary);
 } else {
   throw new Error("Expected 'snapshot' or 'report'");

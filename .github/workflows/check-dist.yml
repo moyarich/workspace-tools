@@ -105,7 +105,7 @@ jobs:
           }
           const matrix = JSON.stringify({include: packages.map(p => ({
             ...p,
-            artifactSuffix: p.directory.replace(/^(packages|apps)\\//, '').replace(/[^a-zA-Z0-9._-]+/g, '-'),
+            artifactSuffix: p.directory.replace(/^(packages|apps)\//, '').replace(/[^a-zA-Z0-9._-]+/g, '-'),
           }))});
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'matrix=' + matrix + '\n');
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has-packages=true\n');

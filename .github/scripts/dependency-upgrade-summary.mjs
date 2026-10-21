@@ -42,6 +42,20 @@ function markdown(value) {
     .replace(/[\r\n]+/g, " ")
     .replaceAll("`", "\\`");
 }
+/** Classify changes to the declared version, without claiming compatibility for non-semver specs. */
+function changeLevel(previous, updated) {
+  const parse = (spec) => {
+    const match = String(spec).match(/^[~^=v\\s]*([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:[-+][^\\s]+)?$/);
+    return match ? match.slice(1, 4).map(Number) : null;
+  };
+  const from = parse(previous);
+  const to = parse(updated);
+  if (!from || !to) return "Other / range change";
+  if (to[0] !== from[0]) return "Major";
+  if (to[1] !== from[1]) return from[0] === 0 ? "Major-zero minor" : "Minor";
+  if (to[2] !== from[2]) return "Patch";
+  return "Range / prerelease";
+}
 function status(value) {
   return (
     {
@@ -82,6 +96,7 @@ if (mode === "snapshot") {
             dependency,
             before: previous[dependency] || "—",
             after: current[dependency] || "—",
+            level: changeLevel(previous[dependency], current[dependency]),
           });
         }
       }
@@ -108,6 +123,12 @@ if (mode === "snapshot") {
     "## Dependency changes",
   ];
   if (changes.length) {
+    const counts = new Map();
+    for (const { level } of changes) counts.set(level, (counts.get(level) || 0) + 1);
+    lines.push("### Version-change overview", "",
+      "| Category | Declarations |", "| --- | ---: |");
+    for (const [category, count] of counts) lines.push(`| ${markdown(category)} | ${count} |`);
+    lines.push("");
     const byFile = new Map();
     for (const change of changes) {
       if (!byFile.has(change.file)) byFile.set(change.file, []);
@@ -121,12 +142,12 @@ if (mode === "snapshot") {
       lines.push(
         `<details><summary>${markdown(file)} — ${items.length} change(s)</summary>`,
         "",
-        "| Dependency | Type | Previous | Updated |",
-        "| --- | --- | --- | --- |",
+        "| Dependency | Type | Category | Previous | Updated |",
+        "| --- | --- | --- | --- | --- |",
       );
       for (const item of items)
         lines.push(
-          `| ${markdown(item.dependency)} | ${markdown(item.type)} | ${markdown(item.before)} | ${markdown(item.after)} |`,
+          `| ${markdown(item.dependency)} | ${markdown(item.type)} | ${markdown(item.level)} | ${markdown(item.before)} | ${markdown(item.after)} |`,
         );
       lines.push("", "</details>", "");
     }

@@ -82,6 +82,28 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Checkout shared configuration schema
+        uses: actions/checkout@v7
+        with:
+          repository: moyarich/reusable-workflows
+          ref: main
+          path: .github/check-dist-schema-source
+          sparse-checkout: reusable-configurations/check-dist-config.schema.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Validate check-dist YAML schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f .github/check-dist-config.yml ]]; then
+            echo "No repository configuration; using defaults."
+            exit 0
+          fi
+          python3 -m venv "$RUNNER_TEMP/check-dist-schema-venv"
+          "$RUNNER_TEMP/check-dist-schema-venv/bin/pip" install --quiet check-jsonschema
+          "$RUNNER_TEMP/check-dist-schema-venv/bin/check-jsonschema" \
+            --schemafile .github/check-dist-schema-source/reusable-configurations/check-dist-config.schema.json \
+            .github/check-dist-config.yml
       - name: Filter discovered packages
         id: select
         shell: bash

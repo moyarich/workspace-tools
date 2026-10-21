@@ -98,9 +98,10 @@ jobs:
           const eligible = report.included;
           const config = fs.existsSync('.github/check-dist.json') ? JSON.parse(fs.readFileSync('.github/check-dist.json', 'utf8')) : {};
           const overrides = config.packages || {};
+          const available = [...eligible, ...(config.extraPackages || [])];
           const packages = selected === 'all'
-            ? eligible
-            : eligible.filter(p => p.directory === selected || p.name === selected);
+            ? available
+            : available.filter(p => p.directory === selected || p.name === selected);
           if (packages.length === 0) {
             console.error('::error title=No matching package::Select a discovered package directory/name or all.');
             process.exit(1);

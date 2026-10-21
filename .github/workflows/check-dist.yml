@@ -96,7 +96,12 @@ jobs:
           const report = JSON.parse(process.env.DISCOVERED);
           const selected = process.env.PACKAGES.trim();
           const eligible = report.included;
-          const config = fs.existsSync('.github/check-dist.json') ? JSON.parse(fs.readFileSync('.github/check-dist.json', 'utf8')) : {};
+          const { execFileSync } = require('node:child_process');
+          const configFile = '.github/check-dist-config.yml';
+          const config = fs.existsSync(configFile)
+            ? JSON.parse(execFileSync('ruby', ['-r', 'yaml', '-r', 'json', '-e',
+                'print JSON.generate(YAML.safe_load(File.read(ARGV.fetch(0)), aliases: false) || {})', configFile], { encoding: 'utf8' }))
+            : {};
           const overrides = config.packages || {};
           const available = [...eligible, ...(config.extraPackages || [])];
           const packages = selected === 'all'

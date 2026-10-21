@@ -20,10 +20,10 @@
     "build:all": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
-    "@types/semver": "^7.7.1",
+    "@types/semver": "^7.8.0",
     "commander": "^15.0.0",
-    "prettier": "^3.6.2",
-    "vite": "^7.1.5",
-    "vitest": "^3.2.4"
+    "prettier": "^3.9.10",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }

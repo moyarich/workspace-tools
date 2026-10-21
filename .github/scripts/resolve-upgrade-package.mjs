@@ -7,7 +7,7 @@ import { appendFile } from "node:fs/promises";
 const root = process.cwd();
 const selector = (process.env.PACKAGE_SELECTOR || "all").trim();
 const rootPkg = JSON.parse(await readFile("package.json", "utf8"));
-const globs = (rootPkg.workspaces?.packages || rootPkg.workspaces || []);
+const globs = rootPkg.workspaces?.packages || rootPkg.workspaces || [];
 const manifests = ["package.json"];
 for (const pattern of globs) {
   if (typeof pattern !== "string") continue;
@@ -17,9 +17,11 @@ for (const pattern of globs) {
     manifests.push(join(pattern, "package.json"));
     continue;
   }
-  if (!pattern.endsWith("/*")) throw new Error(`Unsupported workspace glob: ${pattern}`);
+  if (!pattern.endsWith("/*"))
+    throw new Error(`Unsupported workspace glob: ${pattern}`);
   for (const entry of await readdir(base, { withFileTypes: true })) {
-    if (entry.isDirectory()) manifests.push(join(base, entry.name, "package.json"));
+    if (entry.isDirectory())
+      manifests.push(join(base, entry.name, "package.json"));
   }
 }
 const candidates = [];
@@ -38,16 +40,25 @@ let target;
 if (selector === "all") target = { kind: "all", manifest: "" };
 else {
   const normalized = selector.replace(/^\.\//, "").replace(/\/$/, "");
-  const matches = candidates.filter(({ path, name }) =>
-    selector === name ||
-    normalized === (path === "package.json" ? "." : dirname(path).replaceAll("\\", "/")) ||
-    normalized === path ||
-    (selector === "." && path === "package.json")
+  const matches = candidates.filter(
+    ({ path, name }) =>
+      selector === name ||
+      normalized ===
+        (path === "package.json" ? "." : dirname(path).replaceAll("\\", "/")) ||
+      normalized === path ||
+      (selector === "." && path === "package.json"),
   );
   if (matches.length !== 1) {
-    throw new Error(`Package selector ${JSON.stringify(selector)} matched ${matches.length} manifests. Use a full package name or workspace directory. Valid options: all, ., ${candidates.map(x=>x.name || dirname(x.path)).join(", ")}`);
+    throw new Error(
+      `Package selector ${JSON.stringify(selector)} matched ${matches.length} manifests. Use a full package name or workspace directory. Valid options: all, ., ${candidates.map((x) => x.name || dirname(x.path)).join(", ")}`,
+    );
   }
   target = { kind: "single", manifest: matches[0].path };
 }
-await appendFile(process.env.GITHUB_OUTPUT, `kind=${target.kind}\nmanifest=${target.manifest}\nselector=${selector}\n`);
-console.log(`Selected ${target.kind === "all" ? "all workspace manifests" : target.manifest}`);
+await appendFile(
+  process.env.GITHUB_OUTPUT,
+  `kind=${target.kind}\nmanifest=${target.manifest}\nselector=${selector}\n`,
+);
+console.log(
+  `Selected ${target.kind === "all" ? "all workspace manifests" : target.manifest}`,
+);

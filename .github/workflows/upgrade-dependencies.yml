@@ -2,6 +2,11 @@ name: Upgrade workspace dependencies
 on:
   workflow_dispatch:
     inputs:
+      package:
+        description: Package selector (all, package name, ".", or any workspace directory)
+        required: true
+        default: all
+        type: string
       reject:
         description: Comma-separated package names to exclude from upgrades (optional)
         type: string
@@ -26,18 +31,30 @@ jobs:
           node-version: "24"
           registry-url: https://npm.pkg.github.com
           scope: "@moyarich"
+      - name: Resolve package selection
+        id: selection
+        env:
+          PACKAGE_SELECTOR: ${{ inputs.package }}
+        run: node .github/scripts/resolve-upgrade-package.mjs
       - name: Capture dependency baseline
         id: baseline
         run: node .github/scripts/dependency-upgrade-summary.mjs snapshot
-      - name: Upgrade registry dependencies in root and all workspaces
+      - name: Upgrade selected package dependencies
         id: upgrade
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}
           REJECT: ${{ inputs.reject }}
+          SELECTION_KIND: ${{ steps.selection.outputs.kind }}
+          SELECTION_MANIFEST: ${{ steps.selection.outputs.manifest }}
         shell: bash
         run: |
           set -euo pipefail
-          args=(--upgrade --workspaces --root --dep prod,dev,optional,peer --format group,dep,diff,time)
+          args=(--upgrade --dep prod,dev,optional,peer --format group,dep,diff,time)
+          if [[ "$SELECTION_KIND" == 'all' ]]; then
+            args+=(--workspaces --root)
+          else
+            args+=(--packageFile "$SELECTION_MANIFEST")
+          fi
           if [[ -n "$REJECT" ]]; then
             args+=(--reject "$REJECT")
           fi
@@ -83,6 +100,8 @@ jobs:
         if: always()
         env:
           REJECT: ${{ inputs.reject }}
+          PACKAGE_SELECTOR: ${{ inputs.package }}
+          RESULT_SELECTION: ${{ steps.selection.outcome }}
           RESULT_UPGRADE: ${{ steps.upgrade.outcome }}
           RESULT_INSTALL: ${{ steps.install.outcome }}
           RESULT_COMMIT: ${{ steps.commit.outcome }}

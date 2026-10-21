@@ -45,7 +45,9 @@ function markdown(value) {
 /** Classify changes to the declared version, without claiming compatibility for non-semver specs. */
 function changeLevel(previous, updated) {
   const parse = (spec) => {
-    const match = String(spec).match(/^[~^=v\\s]*([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:[-+][^\\s]+)?$/);
+    const match = String(spec).match(
+      /^[~^=v\\s]*([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:[-+][^\\s]+)?$/,
+    );
     return match ? match.slice(1, 4).map(Number) : null;
   };
   const from = parse(previous);
@@ -124,10 +126,16 @@ if (mode === "snapshot") {
   ];
   if (changes.length) {
     const counts = new Map();
-    for (const { level } of changes) counts.set(level, (counts.get(level) || 0) + 1);
-    lines.push("### Version-change overview", "",
-      "| Category | Declarations |", "| --- | ---: |");
-    for (const [category, count] of counts) lines.push(`| ${markdown(category)} | ${count} |`);
+    for (const { level } of changes)
+      counts.set(level, (counts.get(level) || 0) + 1);
+    lines.push(
+      "### Version-change overview",
+      "",
+      "| Category | Declarations |",
+      "| --- | ---: |",
+    );
+    for (const [category, count] of counts)
+      lines.push(`| ${markdown(category)} | ${count} |`);
     lines.push("");
     const byFile = new Map();
     for (const change of changes) {

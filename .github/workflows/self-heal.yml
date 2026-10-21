@@ -24,7 +24,7 @@ permissions:
   packages: read
 
 concurrency:
-  group: self-heal-${{ github.ref }}
+  group: self-heal-${{ github.repository }}-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -50,13 +50,18 @@ jobs:
   cli-dist:
     name: Heal generated CLI distribution
     needs: prettier
-    uses: moyarich/reusable-workflows/.github/workflows/reusable_heal-cli-dist.yml@main
+    if: ${{ always() && needs.prettier.result == 'success' }}
+    uses: moyarich/reusable-workflows/.github/workflows/reusable_self-heal-dist.yml@main
     with:
       dist-path: packages/workspace-tools/dist/bin/
       build-command: npm run build
+      install-command: npm ci --include=optional
       node-version: "24"
+      node-caching: ""
+      artifact-name: workspace-tools-cli-dist
+      repair: true
+      commit: ${{ github.event_name != 'workflow_dispatch' || inputs.commit }}
+      checkout-sha: ${{ github.ref_name }}
       target-branch: ${{ github.ref_name }}
-      validation-workflow: ci.yml
     permissions:
       contents: write
-      actions: write

@@ -103,7 +103,10 @@ jobs:
             console.error('::error title=Ambiguous overrides::When selecting multiple packages, omit dist-path and build-command overrides or select one package.');
             process.exit(1);
           }
-          const matrix = JSON.stringify({include: packages});
+          const matrix = JSON.stringify({include: packages.map(p => ({
+            ...p,
+            artifactSuffix: p.directory.replace(/^(packages|apps)\\//, '').replace(/[^a-zA-Z0-9._-]+/g, '-'),
+          }))});
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'matrix=' + matrix + '\n');
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has-packages=true\n');
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'single-package=' + (packages.length === 1) + '\n');
@@ -128,7 +131,7 @@ jobs:
         --workspace {0}', matrix.name) }}
       install-command: ${{ inputs.install-command }}
       node-caching: ${{ inputs.node-caching }}
-      artifact-name: ${{ format('dist-{0}', strategy.job-index) }}
+      artifact-name: ${{ format('dist-{0}', matrix.artifactSuffix) }}
       node-version: "24"
       repair: true
       commit: ${{ !inputs.dry-run && 

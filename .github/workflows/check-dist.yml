@@ -1,16 +1,19 @@
 name: Check distribution
 
 run-name: >-
-  Check dist · ${{ inputs.packages }}
+  Check dist · ${{ inputs.package }}
 
 on:
   workflow_dispatch:
     inputs:
-      packages:
-        description: Package directory/name or all discovered workspace packages
-        type: string
+      package:
+        description: Select a buildable workspace package
+        type: choice
         required: true
         default: all
+        options:
+          - all
+          - packages/workspace-tools
       dist-path:
         description: Committed distribution path override (for example actions/dist/); empty derives package dist/
         type: string
@@ -77,7 +80,7 @@ jobs:
         shell: bash
         env:
           DISCOVERED: ${{ needs.discover-packages.outputs.packages }}
-          PACKAGES: ${{ inputs.packages }}
+          PACKAGES: ${{ inputs.package }}
           DIST_PATH_OVERRIDE: ${{ inputs.dist-path }}
           BUILD_COMMAND_OVERRIDE: ${{ inputs.build-command }}
         run: |

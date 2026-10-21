@@ -82,72 +82,25 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Checkout shared configuration schema
+      - name: Checkout reusable check-dist action
         uses: actions/checkout@v7
         with:
           repository: moyarich/reusable-workflows
           ref: main
-          path: .github/check-dist-schema-source
-          sparse-checkout: reusable-configurations/check-dist-config.schema.json
+          path: .github/check-dist-runtime
+          sparse-checkout: |
+            src/actions/check-dist
+            reusable-configurations/check-dist-config.schema.json
           sparse-checkout-cone-mode: false
           persist-credentials: false
-      - name: Validate check-dist YAML schema
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! -f .github/check-dist-config.yml ]]; then
-            echo "No repository configuration; using defaults."
-            exit 0
-          fi
-          python3 -m venv "$RUNNER_TEMP/check-dist-schema-venv"
-          "$RUNNER_TEMP/check-dist-schema-venv/bin/pip" install --quiet check-jsonschema
-          "$RUNNER_TEMP/check-dist-schema-venv/bin/check-jsonschema" \
-            --schemafile .github/check-dist-schema-source/reusable-configurations/check-dist-config.schema.json \
-            .github/check-dist-config.yml
-      - name: Filter discovered packages
+      - name: Select and validate distribution packages
         id: select
-        shell: bash
-        env:
-          DISCOVERED: ${{ needs.discover-packages.outputs.packages }}
-          PACKAGES: ${{ inputs.package }}
-          DIST_PATH_OVERRIDE: ${{ inputs.dist-path }}
-          BUILD_COMMAND_OVERRIDE: ${{ inputs.build-command }}
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const report = JSON.parse(process.env.DISCOVERED);
-          const selected = process.env.PACKAGES.trim();
-          const eligible = report.included;
-          const { execFileSync } = require('node:child_process');
-          const configFile = '.github/check-dist-config.yml';
-          const config = fs.existsSync(configFile)
-            ? JSON.parse(execFileSync('ruby', ['-r', 'yaml', '-r', 'json', '-e',
-                'print JSON.generate(YAML.safe_load(File.read(ARGV.fetch(0)), aliases: false) || {})', configFile], { encoding: 'utf8' }))
-            : {};
-          const overrides = config.packages || {};
-          const available = [...eligible, ...(config.extraPackages || [])];
-          const packages = selected === 'all'
-            ? available
-            : available.filter(p => p.directory === selected || p.name === selected);
-          if (packages.length === 0) {
-            console.error('::error title=No matching package::Select a discovered package directory/name or all.');
-            process.exit(1);
-          }
-          const matrix = JSON.stringify({include: packages.map(p => {
-            const settings = overrides[p.directory] || overrides[p.name] || {};
-            const dir = p.directory === '.' ? 'root' : p.directory;
-            return {
-              ...p,
-              artifactSuffix: dir.replace(/^(packages|apps)\//, '').replace(/[^a-zA-Z0-9._-]+/g, '-'),
-              distTemplate: process.env.DIST_PATH_OVERRIDE || settings.distPath || '{packageDir}/dist',
-              buildCommand: process.env.BUILD_COMMAND_OVERRIDE || settings.buildCommand || (p.directory === '.' ? 'npm run build' : 'npm run build --workspace ' + p.name),
-            };
-          })});
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'matrix=' + matrix + '\n');
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has-packages=true\n');
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'single-package=' + (packages.length === 1) + '\n');
-          console.log('Selected ' + packages.map(p => p.directory).join(', '));
-          NODE
+        uses: ./.github/check-dist-runtime/src/actions/check-dist
+        with:
+          discovered: ${{ needs.discover-packages.outputs.packages }}
+          package: ${{ inputs.package }}
+          dist-path: ${{ inputs.dist-path }}
+          build-command: ${{ inputs.build-command }}
 
   check-dist:
     name: "dist: ${{ matrix.name }}"

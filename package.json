@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "npm run dev -w @moyarich/workspace-tools-playground",
     "build:playground": "npm run build -w @moyarich/workspace-tools-playground",
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run tests --passWithNoTests",
     "build": "npm run build -w @moyarich/workspace-tools",
     "build:clis": "npm run build -w @moyarich/workspace-tools",
     "pack:check": "npm pack -w @moyarich/workspace-tools --dry-run",

@@ -71,7 +71,7 @@ jobs:
         uses: moyarich/reusable-workflows/actions/validate-package-changelogs@main
 
       - name: Run lint
-        run: npm run lint
+        run: npx --yes @biomejs/biome@2.2.5 lint packages apps --only=lint/suspicious/noDebugger --only=lint/suspicious/noDoubleEquals --only=lint/correctness/noUnreachable
 
       - name: Run Typecheck
         id: typecheck

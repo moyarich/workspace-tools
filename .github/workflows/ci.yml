@@ -89,11 +89,11 @@ jobs:
 
       - name: Build workspaces
         id: build-package
-        run: npm run build
+        run: npm run build --workspaces --if-present
 
-      - name: Run Vitest
+      - name: Run Vitest (workspaces and root)
         id: vitest
-        run: npx --no-install vitest run
+        run: npm test --workspaces --if-present --include-workspace-root
 
       - name: Verify package contents
         id: verify-package

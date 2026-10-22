@@ -21,6 +21,9 @@ on:
       - "tsconfig.json"
       - "tsconfig.tests.json"
       - ".github/workflows/ci.yml"
+      - ".github/workflows/check-dist.yml"
+      - ".github/actionlint.yaml"
+      - ".github/check-dist-config.yml"
 
   workflow_dispatch:
     inputs:

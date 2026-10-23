@@ -38,7 +38,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "vite build --config vite.cli.config.ts --mode issue-dependency-tree && vite build --config vite.cli.config.ts --mode discover-packages && vite build --config vite.cli.config.ts --mode workspace-release && vite build --config vite.cli.config.ts --mode sim-version-resolver && vite build --config vite.cli.config.ts --mode workspace-publish && vite build --config vite.cli.config.ts --mode workspace-dependency-check && vite build --config vite.cli.config.ts --mode workspace-package-lock && vite build --config vite.cli.config.ts --mode workspace-release-identity && vite build --config vite.cli.config.ts --mode workspace-approved-release",
+    "build": "vite build --config vite.cli.config.ts --mode issue-dependency-tree && vite build --config vite.cli.config.ts --mode discover-packages && vite build --config vite.cli.config.ts --mode workspace-release && vite build --config vite.cli.config.ts --mode sim-version-resolver && vite build --config vite.cli.config.ts --mode workspace-publish && vite build --config vite.cli.config.ts --mode workspace-dependency-check && vite build --config vite.cli.config.ts --mode workspace-package-lock && vite build --config vite.cli.config.ts --mode workspace-release-identity && vite build --config vite.cli.config.ts --mode workspace-approved-release && vite build --config vite.cli.config.ts --mode workspace-prepare-release",
     "test": "vitest run tests",
     "pack:check": "npm pack --dry-run"
   },
@@ -54,7 +54,8 @@
     "workspace-dependency-check": "dist/bin/workspace-dependency-check.mjs",
     "workspace-package-lock": "dist/bin/workspace-package-lock.mjs",
     "workspace-release-identity": "dist/bin/workspace-release-identity.mjs",
-    "workspace-approved-release": "dist/bin/workspace-approved-release.mjs"
+    "workspace-approved-release": "dist/bin/workspace-approved-release.mjs",
+    "workspace-prepare-release": "dist/bin/workspace-prepare-release.mjs"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.7.4",

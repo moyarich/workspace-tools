@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { workspacePackages, packageInfo, type WorkspacePackage } from "../workspace/workspace.ts";
+import { workspacePackages, packageInfo } from "../workspace/workspace.ts";
 import { resolveReleaseVersions, type ReleaseVersionOptions } from "../release-identity/release-versions.ts";
 
 /** Prepare package manifests without publishing, tagging, or creating releases. */

@@ -6,6 +6,35 @@ import {
   type ReleaseVersionOptions,
 } from "../release-identity/release-versions.ts";
 
+/** Only release packages whose source changed since their latest package tag.
+ * If no tag or git history is available, retain the first-release behavior.
+ */
+function hasChangesSinceRelease(root: string, pkg: ReturnType<typeof packageInfo>): boolean {
+  const directory = pkg.directory === "." ? "." : pkg.directory;
+  const prefixes = [directory === "." ? pkg.manifest.name : directory, pkg.manifest.name];
+  try {
+    const tags = [...new Set(prefixes.flatMap((prefix) =>
+      execFileSync("git", ["tag", "--list", `${prefix}@*`], { cwd: root, encoding: "utf8" })
+        .trim().split("\\n").filter(Boolean),
+    ))];
+    if (!tags.length) return true;
+    const latest = execFileSync("git", ["for-each-ref", "--sort=-creatordate", "--format=%(refname:short)", ...tags.map((tag) => `refs/tags/${tag}`)], {
+      cwd: root, encoding: "utf8",
+    }).trim().split("\\n")[0];
+    if (!latest) return true;
+    const files = execFileSync("git", ["diff", "--name-only", latest, "--", directory], {
+      cwd: root, encoding: "utf8",
+    }).trim().split("\\n").filter(Boolean);
+    const base = directory === "." ? "" : directory + "/";
+    return files.some((file) => {
+      const local = file.startsWith(base) ? file.slice(base.length) : file;
+      return !["package.json", "package-lock.json", "CHANGELOG.md"].includes(local);
+    });
+  } catch {
+    return true;
+  }
+}
+
 /** Prepare package manifests without publishing, tagging, or creating releases. */
 export function prepareRelease(
   root: string,
@@ -20,15 +49,16 @@ export function prepareRelease(
   if (rootPkg.manifest.private !== true) eligible.unshift(rootPkg);
   const selected =
     selector === "all"
-      ? eligible
+      ? eligible.filter((p) => hasChangesSinceRelease(root, p))
       : eligible.filter(
           (p) =>
             p.directory === selector ||
             p.manifest.name === selector ||
             p.directory.split("/").at(-1) === selector,
         );
-  if (!selected.length)
+  if (!selected.length && selector !== "all")
     throw new Error("No publishable package matches " + selector);
+  if (!selected.length) return { schemaVersion: 1, packages: [], changedFiles: [] };
   const resolved = resolveReleaseVersions(
     selected.map((p) => ({
       name: p.manifest.name,
@@ -42,7 +72,7 @@ export function prepareRelease(
   for (const pkg of [rootPkg, ...workspacePackages(root)]) {
     // Private applications consume local workspace packages; preparing a
     // release must not pin their dependency declarations to published versions.
-    if (pkg.manifest.private === true) continue;
+    if (pkg.manifest.private === true || !versions.has(pkg.manifest.name)) continue;
     const file = pkg.file;
     const original = readFileSync(file, "utf8");
     const manifest = JSON.parse(original);
@@ -90,7 +120,7 @@ export function prepareRelease(
   };
   if (write) {
     for (const update of updates) writeFileSync(update.file, update.content);
-    execFileSync(
+    if (updates.length) execFileSync(
       "npm",
       [
         "install",

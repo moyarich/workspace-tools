@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -64,6 +65,44 @@ describe("workspace preparation", () => {
       expect(result.changedFiles).toHaveLength(2);
       expect(result.changedFiles).not.toContain(playground);
       expect(readFileSync(playground, "utf8")).toBe(original);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+  it("skips tagged unchanged addons and excludes their manifest and lockfile", () => {
+    const root = mkdtempSync(join(tmpdir(), "prepare-release-git-"));
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
+    try {
+      for (const dir of ["packages/changed", "packages/unchanged"])
+        mkdirSync(join(root, dir), { recursive: true });
+      writeFileSync(join(root, "package.json"), JSON.stringify({
+        name: "root", version: "0.0.0", private: true, workspaces: ["packages/*"],
+      }));
+      for (const name of ["changed", "unchanged"]) {
+        writeFileSync(join(root, `packages/${name}/package.json`), JSON.stringify({
+          name: `@example/${name}`, version: "0.1.0",
+        }));
+        writeFileSync(join(root, `packages/${name}/index.ts`), "export const value = 1;\\n");
+      }
+      git("init"); git("config", "user.email", "test@example.com");
+      git("config", "user.name", "Release Test");
+      git("add", "."); git("commit", "-m", "initial");
+      git("tag", "packages/changed@0.1.0");
+      git("tag", "packages/unchanged@0.1.0");
+      writeFileSync(join(root, "packages/changed/index.ts"), "export const value = 2;\\n");
+      git("add", "."); git("commit", "-m", "change only one addon");
+      const result = prepareRelease(root, "all", { mode: "bump", bump: "minor" }, false);
+      expect(result.packages.map((p) => p.name)).toEqual(["@example/changed"]);
+      expect(result.changedFiles).toEqual([join(root, "packages/changed/package.json")]);
+      expect(readFileSync(join(root, "packages/unchanged/package.json"), "utf8"))
+        .toContain('"version":"0.1.0"');
+      // Metadata-only edits do not qualify as a package implementation change.
+      git("tag", "-f", "packages/changed@0.1.0");
+      writeFileSync(join(root, "packages/changed/CHANGELOG.md"), "release notes\\n");
+      git("add", "."); git("commit", "-m", "notes only");
+      const none = prepareRelease(root, "all", { mode: "bump", bump: "minor" }, true);
+      expect(none.packages).toEqual([]);
+      expect(none.changedFiles).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -23,6 +23,7 @@ describe("workspace preparation", () => {
         join(root, "package.json"),
         JSON.stringify({
           name: "root",
+          version: "0.0.0",
           private: true,
           workspaces: ["packages/*", "apps/*"],
         }),

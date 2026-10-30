@@ -11,7 +11,7 @@ on:
         description: Workspace Tools CLI source for package discovery
         type: choice
         required: true
-        default: checkout:current
+        default: auto
         options:
           - auto
           - checkout:current
@@ -24,7 +24,7 @@ on:
         default: all
         options:
           - all
-          - packages/workspace-tools
+          - packages/example
       version-mode:
         description: Version mode
         required: true
@@ -58,9 +58,6 @@ on:
         default: true
         type: boolean
 
-  push:
-    branches: [main]
-
 permissions: {}
 
 jobs:
@@ -78,13 +75,14 @@ jobs:
     name: Discover publishable packages
     permissions:
       contents: read
+      packages: read
     uses: moyarich/reusable-workflows/.github/workflows/reusable_discover-packages.yml@main
     with:
       packages-directory: packages
       use-workspaces: true
       include-root-package: false
       require-publish-config: false
-      workspace-tools-source: ${{ inputs.workspace-tools-source || 'checkout:current' }}
+      workspace-tools-source: ${{ inputs.workspace-tools-source || 'auto' }}
 
   select-packages:
     name: Select packages for drafting

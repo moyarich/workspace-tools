@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import semver from "semver";
 import { workspacePackages, packageInfo } from "../workspace/workspace.ts";
 import {
   resolveReleaseVersions,
@@ -70,14 +71,40 @@ export function prepareRelease(
   if (!selected.length && selector !== "all")
     throw new Error("No publishable package matches " + selector);
   if (!selected.length) return { schemaVersion: 1, packages: [], changedFiles: [] };
-  const resolved = resolveReleaseVersions(
-    selected.map((p) => ({
-      name: p.manifest.name,
-      directory: p.directory,
-      version: p.manifest.version,
-    })),
-    options,
-  );
+
+  const releaseSet = new Map(selected.map((pkg) => [pkg.manifest.name, pkg]));
+  const fields = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+  // Expand the release set until every incompatible workspace dependent is included.
+  // Semver-compatible dependents can continue using their existing range.
+  let resolved = [];
+  while (true) {
+    resolved = resolveReleaseVersions(
+      [...releaseSet.values()].map((p) => ({
+        name: p.manifest.name,
+        directory: p.directory,
+        version: p.manifest.version,
+      })),
+      options,
+    );
+    const versions = new Map(resolved.map((p) => [p.name, p.version]));
+    let added = false;
+    for (const pkg of eligible) {
+      if (releaseSet.has(pkg.manifest.name)) continue;
+      const incompatible = fields.some((field) =>
+        Object.entries(pkg.manifest[field] ?? {}).some(([name, range]) =>
+          versions.has(name) &&
+          typeof range === "string" &&
+          semver.validRange(range) !== null &&
+          !semver.satisfies(versions.get(name)!, range),
+        ),
+      );
+      if (incompatible) {
+        releaseSet.set(pkg.manifest.name, pkg);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
   const versions = new Map(resolved.map((p) => [p.name, p.version]));
   const updates: Array<{ file: string; content: string }> = [];
   for (const pkg of [rootPkg, ...workspacePackages(root)]) {

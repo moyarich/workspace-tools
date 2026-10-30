@@ -40,6 +40,9 @@ export function prepareRelease(
   const versions = new Map(resolved.map((p) => [p.name, p.version]));
   const updates: Array<{ file: string; content: string }> = [];
   for (const pkg of [rootPkg, ...workspacePackages(root)]) {
+    // Private applications consume local workspace packages; preparing a
+    // release must not pin their dependency declarations to published versions.
+    if (pkg.manifest.private === true) continue;
     const file = pkg.file;
     const original = readFileSync(file, "utf8");
     const manifest = JSON.parse(original);

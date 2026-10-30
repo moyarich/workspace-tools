@@ -15,20 +15,31 @@ function hasChangesSinceRelease(root: string, pkg: ReturnType<typeof packageInfo
   try {
     const tags = [...new Set(prefixes.flatMap((prefix) =>
       execFileSync("git", ["tag", "--list", `${prefix}@*`], { cwd: root, encoding: "utf8" })
-        .trim().split("\\n").filter(Boolean),
+        .trim().split("\n").filter(Boolean),
     ))];
     if (!tags.length) return true;
     const latest = execFileSync("git", ["for-each-ref", "--sort=-creatordate", "--format=%(refname:short)", ...tags.map((tag) => `refs/tags/${tag}`)], {
       cwd: root, encoding: "utf8",
-    }).trim().split("\\n")[0];
+    }).trim().split("\n")[0];
     if (!latest) return true;
     const files = execFileSync("git", ["diff", "--name-only", latest, "--", directory], {
       cwd: root, encoding: "utf8",
-    }).trim().split("\\n").filter(Boolean);
+    }).trim().split("\n").filter(Boolean);
     const base = directory === "." ? "" : directory + "/";
     return files.some((file) => {
       const local = file.startsWith(base) ? file.slice(base.length) : file;
-      return !["package.json", "package-lock.json", "CHANGELOG.md"].includes(local);
+      if (local === "package.json") {
+        const previous = JSON.parse(execFileSync("git", ["show", `${latest}:${file}`], {
+          cwd: root, encoding: "utf8",
+        }));
+        const current = JSON.parse(readFileSync(pkg.file, "utf8"));
+        const fields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
+        return fields.some((field) =>
+          JSON.stringify(Object.entries(previous[field] ?? {}).sort()) !==
+          JSON.stringify(Object.entries(current[field] ?? {}).sort()),
+        );
+      }
+      return !["package-lock.json", "CHANGELOG.md"].includes(local);
     });
   } catch {
     return true;

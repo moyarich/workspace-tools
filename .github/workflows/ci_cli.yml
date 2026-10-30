@@ -2,7 +2,7 @@ name: CI / CLI and workspace quality
 on:
   push:
     branches: [main]
-    paths: &cli_paths
+    paths:
       - ".github/workflows/ci_cli.yml"
       - "src/**"
       - "packages/**"
@@ -13,7 +13,6 @@ on:
       - "package*.json"
       - ".npmrc"
   pull_request:
-    paths: *cli_paths
   workflow_call:
     inputs:
       checkout-sha:

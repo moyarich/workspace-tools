@@ -118,6 +118,42 @@ describe("workspace preparation", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+  it("includes incompatible dependents transitively but skips compatible ranges", () => {
+    const root = mkdtempSync(join(tmpdir(), "prepare-release-dependents-"));
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
+    try {
+      for (const name of ["core", "addon", "consumer", "compatible"])
+        mkdirSync(join(root, "packages", name), { recursive: true });
+      writeFileSync(join(root, "package.json"), JSON.stringify({
+        name: "root", version: "0.0.0", private: true, workspaces: ["packages/*"],
+      }));
+      const definitions = {
+        core: { name: "@example/core", version: "0.1.0" },
+        addon: { name: "@example/addon", version: "0.1.0", peerDependencies: { "@example/core": "^0.1.0" } },
+        consumer: { name: "@example/consumer", version: "0.1.0", dependencies: { "@example/addon": "^0.1.0" } },
+        compatible: { name: "@example/compatible", version: "0.1.0", peerDependencies: { "@example/core": ">=0.1.0 <1.0.0" } },
+      };
+      for (const [name, manifest] of Object.entries(definitions)) {
+        writeFileSync(join(root, "packages", name, "package.json"), JSON.stringify(manifest));
+        writeFileSync(join(root, "packages", name, "index.ts"), "export const value = 1;\n");
+      }
+      git("init"); git("config", "user.email", "ci@example.com"); git("config", "user.name", "CI");
+      git("add", "."); git("commit", "-m", "first release");
+      for (const name of Object.keys(definitions)) git("tag", `packages/${name}@0.1.0`);
+      writeFileSync(join(root, "packages/core/index.ts"), "export const value = 2;\n");
+      git("add", "."); git("commit", "-m", "core feature");
+      const result = prepareRelease(root, "all", { mode: "bump", bump: "minor" }, false);
+      expect(result.packages.map((p) => p.name).sort()).toEqual([
+        "@example/addon", "@example/consumer", "@example/core",
+      ]);
+      expect(result.changedFiles.map((file) => file.replace(root, ""))).toEqual(
+        expect.arrayContaining(["/packages/core/package.json", "/packages/addon/package.json", "/packages/consumer/package.json"]),
+      );
+      expect(result.changedFiles.some((file) => file.includes("/compatible/"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   it("previews existing package.json versions without mutation", () => {
     const root = mkdtempSync(join(tmpdir(), "prepare-release-"));
     try {

@@ -1,10 +1,51 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import semver from "semver";
 import { workspacePackages, packageInfo } from "../workspace/workspace.ts";
 import {
   resolveReleaseVersions,
   type ReleaseVersionOptions,
 } from "../release-identity/release-versions.ts";
+
+/** Only release packages whose source changed since their latest package tag.
+ * If no tag or git history is available, retain the first-release behavior.
+ */
+function hasChangesSinceRelease(root: string, pkg: ReturnType<typeof packageInfo>): boolean {
+  const directory = pkg.directory === "." ? "." : pkg.directory;
+  const prefixes = [directory === "." ? pkg.manifest.name : directory, pkg.manifest.name];
+  try {
+    const tags = [...new Set(prefixes.flatMap((prefix) =>
+      execFileSync("git", ["tag", "--list", `${prefix}@*`], { cwd: root, encoding: "utf8" })
+        .trim().split("\n").filter(Boolean),
+    ))];
+    if (!tags.length) return true;
+    const latest = execFileSync("git", ["for-each-ref", "--sort=-creatordate", "--format=%(refname:short)", ...tags.map((tag) => `refs/tags/${tag}`)], {
+      cwd: root, encoding: "utf8",
+    }).trim().split("\n")[0];
+    if (!latest) return true;
+    const files = execFileSync("git", ["diff", "--name-only", latest, "--", directory], {
+      cwd: root, encoding: "utf8",
+    }).trim().split("\n").filter(Boolean);
+    const base = directory === "." ? "" : directory + "/";
+    return files.some((file) => {
+      const local = file.startsWith(base) ? file.slice(base.length) : file;
+      if (local === "package.json") {
+        const previous = JSON.parse(execFileSync("git", ["show", `${latest}:${file}`], {
+          cwd: root, encoding: "utf8",
+        }));
+        const current = JSON.parse(readFileSync(pkg.file, "utf8"));
+        const fields = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
+        return fields.some((field) =>
+          JSON.stringify(Object.entries(previous[field] ?? {}).sort()) !==
+          JSON.stringify(Object.entries(current[field] ?? {}).sort()),
+        );
+      }
+      return !["package-lock.json", "CHANGELOG.md"].includes(local);
+    });
+  } catch {
+    return true;
+  }
+}
 
 /** Prepare package manifests without publishing, tagging, or creating releases. */
 export function prepareRelease(
@@ -20,29 +61,56 @@ export function prepareRelease(
   if (rootPkg.manifest.private !== true) eligible.unshift(rootPkg);
   const selected =
     selector === "all"
-      ? eligible
+      ? eligible.filter((p) => hasChangesSinceRelease(root, p))
       : eligible.filter(
           (p) =>
             p.directory === selector ||
             p.manifest.name === selector ||
             p.directory.split("/").at(-1) === selector,
         );
-  if (!selected.length)
+  if (!selected.length && selector !== "all")
     throw new Error("No publishable package matches " + selector);
-  const resolved = resolveReleaseVersions(
-    selected.map((p) => ({
-      name: p.manifest.name,
-      directory: p.directory,
-      version: p.manifest.version,
-    })),
-    options,
-  );
+  if (!selected.length) return { schemaVersion: 1, packages: [], changedFiles: [] };
+
+  const releaseSet = new Map(selected.map((pkg) => [pkg.manifest.name, pkg]));
+  const fields = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+  // Expand the release set until every incompatible workspace dependent is included.
+  // Semver-compatible dependents can continue using their existing range.
+  let resolved = [];
+  while (true) {
+    resolved = resolveReleaseVersions(
+      [...releaseSet.values()].map((p) => ({
+        name: p.manifest.name,
+        directory: p.directory,
+        version: p.manifest.version,
+      })),
+      options,
+    );
+    const versions = new Map(resolved.map((p) => [p.name, p.version]));
+    let added = false;
+    for (const pkg of eligible) {
+      if (releaseSet.has(pkg.manifest.name)) continue;
+      const incompatible = fields.some((field) =>
+        Object.entries(pkg.manifest[field] ?? {}).some(([name, range]) =>
+          versions.has(name) &&
+          typeof range === "string" &&
+          semver.validRange(range) !== null &&
+          !semver.satisfies(versions.get(name)!, range),
+        ),
+      );
+      if (incompatible) {
+        releaseSet.set(pkg.manifest.name, pkg);
+        added = true;
+      }
+    }
+    if (!added) break;
+  }
   const versions = new Map(resolved.map((p) => [p.name, p.version]));
   const updates: Array<{ file: string; content: string }> = [];
   for (const pkg of [rootPkg, ...workspacePackages(root)]) {
     // Private applications consume local workspace packages; preparing a
     // release must not pin their dependency declarations to published versions.
-    if (pkg.manifest.private === true) continue;
+    if (pkg.manifest.private === true || !versions.has(pkg.manifest.name)) continue;
     const file = pkg.file;
     const original = readFileSync(file, "utf8");
     const manifest = JSON.parse(original);
@@ -90,7 +158,7 @@ export function prepareRelease(
   };
   if (write) {
     for (const update of updates) writeFileSync(update.file, update.content);
-    execFileSync(
+    if (updates.length) execFileSync(
       "npm",
       [
         "install",

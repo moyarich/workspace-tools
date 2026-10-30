@@ -100,6 +100,17 @@ describe("workspace preparation", () => {
       git("tag", "-f", "packages/changed@0.1.0");
       writeFileSync(join(root, "packages/changed/CHANGELOG.md"), "release notes\\n");
       git("add", "."); git("commit", "-m", "notes only");
+      // A version-only edit stays excluded; dependency range changes qualify.
+      const dependencyFile = join(root, "packages/unchanged/package.json");
+      writeFileSync(dependencyFile, JSON.stringify({
+        name: "@example/unchanged", version: "0.1.0",
+        peerDependencies: { "@example/changed": "^1.2.0" },
+      }));
+      git("add", "."); git("commit", "-m", "update peer range");
+      const dependencyChange = prepareRelease(root, "all", { mode: "bump", bump: "minor" }, false);
+      expect(dependencyChange.packages.map((p) => p.name)).toEqual(["@example/unchanged"]);
+      // Return to the exact tag manifest before testing no-change behavior.
+      git("reset", "--hard", "HEAD~1");
       const none = prepareRelease(root, "all", { mode: "bump", bump: "minor" }, true);
       expect(none.packages).toEqual([]);
       expect(none.changedFiles).toEqual([]);

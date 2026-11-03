@@ -69,6 +69,54 @@ describe("workspace preparation", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+  it("includes every publishable package for package-json and exact modes even when unchanged since old tags", () => {
+    const root = mkdtempSync(join(tmpdir(), "prepare-release-manifest-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: root, stdio: "pipe" });
+    try {
+      for (const name of ["core", "addon", "private-app"])
+        mkdirSync(join(root, "packages", name), { recursive: true });
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({
+          name: "root",
+          private: true,
+          version: "0.0.0",
+          workspaces: ["packages/*"],
+        }),
+      );
+      for (const name of ["core", "addon", "private-app"]) {
+        writeFileSync(
+          join(root, "packages", name, "package.json"),
+          JSON.stringify({
+            name: `@example/${name}`,
+            version: "0.2.0",
+            ...(name === "private-app" ? { private: true } : {}),
+          }),
+        );
+      }
+      git("init");
+      git("config", "user.email", "ci@example.com");
+      git("config", "user.name", "CI");
+      git("add", ".");
+      git("commit", "-m", "initial versions");
+      // These old tags match the current code, but not the requested 0.2.0 release.
+      git("tag", "packages/core@0.1.0");
+      git("tag", "packages/addon@0.1.0");
+
+      expect(
+        prepareRelease(root, "all", { mode: "package-json" }).packages.map((p) => p.name),
+      ).toEqual(["@example/addon", "@example/core"]);
+      expect(
+        prepareRelease(root, "all", { mode: "exact", exactVersion: "0.2.0" }).packages.map((p) => p.name),
+      ).toEqual(["@example/addon", "@example/core"]);
+      // Change-filtering for automatic and bump releases remains intact.
+      expect(prepareRelease(root, "all", { mode: "bump" }).packages).toEqual([]);
+      expect(prepareRelease(root, "all", { mode: "auto" }).packages).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   it("skips tagged unchanged addons and excludes their manifest and lockfile", () => {
     const root = mkdtempSync(join(tmpdir(), "prepare-release-git-"));
     const git = (...args: string[]) => execFileSync("git", args, { cwd: root, stdio: "pipe" });

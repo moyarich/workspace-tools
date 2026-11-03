@@ -61,7 +61,9 @@ export function prepareRelease(
   if (rootPkg.manifest.private !== true) eligible.unshift(rootPkg);
   const selected =
     selector === "all"
-      ? eligible.filter((p) => hasChangesSinceRelease(root, p))
+      ? options.mode === "package-json" || options.mode === "exact"
+        ? eligible
+        : eligible.filter((p) => hasChangesSinceRelease(root, p))
       : eligible.filter(
           (p) =>
             p.directory === selector ||
